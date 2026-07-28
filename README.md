@@ -29,21 +29,48 @@ The design medium is **HTML/CSS/JS** — these are prototypes, not production co
 # Der Abendstratege — Implementierung
 
 Das Design aus `project/Der Abendstratege.dc.html` ist in diesem Repository als
-lauffähige Web-App umgesetzt: **Vite + React + TypeScript**, alle Daten lokal im
-`localStorage`, kein Backend, keine Tracker.
+lauffähige Web-App umgesetzt: **Vite + React + TypeScript**. Anmeldung über
+Google, Daten pro Konto in Firestore, Abend-Erinnerung als echte
+Push-Benachrichtigung.
+
+**Erstinbetriebnahme: siehe [SETUP.md](SETUP.md).** Ohne die Werte aus dem
+Firebase-Projekt zeigt die App statt des Anmeldebildschirms einen Hinweis.
 
 ## Loslegen
 
 ```bash
 npm install
-npm run dev      # Entwicklungsserver (http://localhost:5173)
-npm run build    # Produktionsbuild nach dist/
-npm run preview  # Build lokal prüfen
+npm run dev        # Entwicklungsserver (http://localhost:5173)
+npm run build      # Produktionsbuild nach dist/
+npm run preview    # Build lokal prüfen
+npm test           # Terminlogik des Versands + Sicherheitsregeln
+npm run icons      # Icons aus assets/icon.svg neu erzeugen
 ```
 
-`dist/` ist ein rein statischer Ordner und kann auf jedem Webspace liegen
-(GitHub Pages, Netlify, eigener Server). Die App lädt lediglich die beiden
-Schriften von Google Fonts nach; sonst geht nichts nach außen.
+## Dienste und Kosten
+
+Alles läuft im dauerhaft kostenlosen Rahmen, ohne hinterlegte Zahlungsmethode:
+
+| Baustein | Dienst | Kostenloses Kontingent |
+| --- | --- | --- |
+| Anmeldung | Firebase Authentication (Spark) | unbegrenzt für Google-Login |
+| Datenbank | Cloud Firestore (Spark) | 1 GiB, 50 000 Lesevorgänge und 20 000 Schreibvorgänge pro Tag |
+| Hosting | Firebase Hosting (Spark) | 10 GB Speicher, 360 MB Auslieferung pro Tag |
+| Push-Zustellung | Web Push über Apple/Google/Mozilla | kostenlos, kein Konto nötig |
+| Zeitplan | GitHub Actions (`.github/workflows/reminder.yml`) | unbegrenzt bei öffentlichen Repos |
+
+Bewusst **nicht** verwendet: Firebase Cloud Functions. Die setzen den
+Blaze-Tarif und damit eine hinterlegte Zahlungsmethode voraus. Der geplante
+Job im Repo übernimmt ihre Aufgabe vollständig.
+
+## Veröffentlichung
+
+`.github/workflows/deploy.yml` baut die App bei jedem Push auf `main` und lädt
+sie zu Firebase Hosting. Firebase Hosting statt GitHub Pages, weil es den
+Anmelde-Helfer unter `/__/auth/` auf derselben Domain ausliefert – ohne das
+funktioniert die Google-Weiterleitung auf dem iPhone im Homescreen-Modus nicht
+zuverlässig. Außerdem liegt die App unter der Wurzel, sodass der Service Worker
+ohne Pfadkorrekturen für die ganze Anwendung zuständig ist.
 
 ## Der Abend im Ablauf
 
@@ -62,37 +89,72 @@ erneut, einzelne Durchläufe lassen sich entfernen, Hiebe bearbeiten.
 ## Aufbau
 
 ```
-index.html            Einstiegspunkt, Schriften, Meta-Daten
+index.html            Einstiegspunkt, Schriften, Icons, iOS-Meta-Daten
+assets/icon.svg       Quelle aller Icons – Messing-Monogramm auf dunklem Grund
+public/               Icons, Manifest, Service Worker (unverändert ausgeliefert)
+  sw.js               Push-Empfang, Klickverhalten, schlichter Offline-Fallback
+firestore.rules       Sicherheitsregeln: jedes Konto sieht nur seinen Zweig
+firebase.json         Hosting-Konfiguration samt Cache-Regeln
 src/
-  App.tsx             Rahmen: Ansichtszustand, Verteilung auf die vier Bereiche
+  App.tsx             Anmelde-Weiche, Ansichtszustand, Verteilung auf die Bereiche
   styles.css          Design-Tokens (Farben, Schriften) und alle Komponenten-Styles
   lib/
-    types.ts          Datenmodell (Area, AreaReflection, Hieb, Entry …)
+    types.ts          Datenmodell (Area, AreaReflection, Hieb, Entry, Reminder …)
     constants.ts      Vorschlagsbereiche, die fünf Leitfragen, Grenzwerte
     factories.ts      Leere Reflexion, leerer Hieb, leerer Entwurf
     date.ts           Lokales Datum, deutsche Formate, Wochenschlüssel, Streak
-    storage.ts        Laden, Speichern und Migration alter Datenstände
+    storage.ts        Einlesen, Migration alter Stände, lokaler Spiegel
+    firebase.ts       Zugriff auf Auth und Firestore
+    firebase-config.ts Die einzutragenden Projektwerte (nicht geheim)
+    auth.ts           Google-Anmeldung, Popup bzw. Weiterleitung je nach Gerät
+    remote.ts         Lesen und Schreiben in Firestore, Abgleich der Änderungen
+    push.ts           Berechtigung, Push-Abo, Geräteverwaltung
+    platform.ts       Was Benachrichtigungen auf diesem Gerät im Weg steht
     store.ts          Zustand und alle schreibenden Aktionen (`useStore`)
     selectors.ts      Ableitungen: Sortierung, Statistiken, Bereichsnamen
   components/
+    LoginScreen.tsx   Anmeldung mit Google
+    SettingsView.tsx  Konto, Abend-Erinnerung, Gerätestatus
+    SyncBadge.tsx     Dezenter Hinweis auf Speichern, Offline, Fehler
     SetupScreen.tsx   Einmalige Einrichtung der fünf Leitziele
-    AppHeader.tsx     Titel, Streak-Anzeige, Navigation
+    AppHeader.tsx     Titel, Streak-Anzeige, Navigation, Zahnrad
     ConfirmDialog.tsx Rückfrage vor unwiderruflichen Schritten
     reflect/          Auftakt, Bereichswahl, Durchlauf, Zwischenfrage, Hiebe, Abschluss
     MorgenView.tsx    Tagesliste: Hiebe plus ergänzte To-dos
     RueckblickView.tsx Auswertungen, Filter, Archiv
     EntryCard.tsx     Ein Abend im Archiv, Bereiche einzeln aufklappbar
     ZieleView.tsx     Lebensbereiche und Ziele verwalten
+scripts/
+  send-reminders.mjs  Versand der Abend-Erinnerungen (läuft in GitHub Actions)
+  schedule.mjs        Wann ist eine Erinnerung fällig – reine Funktionen
+  test-schedule.mjs   Prüfung der Zeitzonen- und Terminlogik
+  test-rules.mjs      Prüfung der Sicherheitsregeln gegen den Emulator
+  make-icons.mjs      Erzeugt alle Icon-Größen aus assets/icon.svg
 ```
 
 ## Daten
 
-Alles liegt unter einem Schlüssel (`abendstratege-v1`) im `localStorage`:
-Lebensbereiche samt Leitziel, alle Abende (ein Eintrag pro Tag, mit beliebig
-vielen Bereichs-Reflexionen, einer gemeinsamen Hieb-Liste und einer optionalen
-Erkenntnis) sowie die begonnene, noch nicht abgeschlossene Reflexion. Der
-Entwurf wird bei jeder Eingabe gesichert – ein geschlossener Tab kostet keinen
-Satz.
+Pro Konto in Firestore, getrennt nach Änderungshäufigkeit:
+
+```
+users/{uid}                       Lebensbereiche, Ziele, Einstellungen, Entwurf
+users/{uid}/entries/{YYYY-MM-DD}  ein Dokument pro Abend
+users/{uid}/devices/{geraeteId}   Push-Abo je Gerät
+```
+
+Ein Abend als eigenes Dokument statt alles in einem: So bleibt jede Änderung
+ein kleiner Schreibvorgang, und der Stand wächst nicht gegen das
+Dokumentenlimit von 1 MiB.
+
+Geschrieben wird verzögert und gebündelt – erst nach einer kurzen Tippause, und
+auch dann nur für die Dokumente, die sich wirklich verändert haben. Der Entwurf
+wird bei jeder Eingabe fortgeschrieben; ohne diesen Abgleich wären das pro Abend
+hunderte überflüssige Schreibvorgänge. Parallel liegt ein Spiegel im
+`localStorage`, damit die App auch ohne Verbindung sofort mit Inhalt dasteht.
+
+**Übernahme lokaler Daten:** Beim ersten Anmelden eines Kontos wird ein
+vorhandener Stand aus `abendstratege-v1` automatisch übernommen. Der lokale
+Schlüssel bleibt unangetastet liegen – er dient weiterhin als Sicherheitsnetz.
 
 **Migration:** Datenstände aus der ersten Fassung (ein Erfolg pro Abend plus
 „weitere Erfolge“ in Kurzform) werden beim Laden automatisch in das neue Format
@@ -109,3 +171,31 @@ Abweichungen vom ursprünglichen Prototyp: Die Vorschau-Schalter des Design-Tool
 (`demoDaten`, `startAnsicht`) sind nicht übernommen. Ergänzt wurden
 Tastatur-Fokusringe, ARIA-Beschriftungen und einige dezente Hover-Zustände, die
 das Prototyp-Format nicht ausdrücken konnte.
+
+## Abend-Erinnerung
+
+Der Versand läuft serverseitig und hängt nicht daran, dass die App offen ist.
+`.github/workflows/reminder.yml` startet `scripts/send-reminders.mjs` alle
+15 Minuten. Der Job prüft je Konto, ob die eingestellte Uhrzeit in der jeweiligen
+Zeitzone erreicht ist, überspringt Abende mit bereits abgeschlossener Reflexion,
+stellt an alle hinterlegten Geräte zu und räumt abgelaufene Abos weg. Ein
+Nachlauf von 90 Minuten fängt verspätete Cron-Läufe ab; nach Mitternacht wird
+nichts mehr nachgereicht.
+
+Der enge Takt ist der Grund, warum beliebige Uhrzeiten und Zeitzonen mit einem
+einzigen Zeitplan funktionieren.
+
+**Web Push auf dem iPhone** ist an drei Bedingungen geknüpft: iOS 16.4 oder
+neuer, die Seite muss über Safari mit „Zum Home-Bildschirm“ installiert sein,
+und die Berechtigung lässt sich erst aus der installierten App heraus erteilen.
+Im normalen Safari-Tab fehlt die Schnittstelle vollständig. Die App prüft das
+und nennt in den Einstellungen den jeweils passenden Ausweg, statt den Schalter
+wirkungslos anzubieten.
+
+Zum Prüfen ohne Warten auf den Abend:
+
+- **Auf diesem Gerät:** Einstellungen → „Testbenachrichtigung senden“. Zeigt die
+  Meldung sofort über den Service Worker an – prüft Berechtigung und Darstellung.
+- **Über den echten Weg:** GitHub → Actions → „Abend-Erinnerung“ → „Run
+  workflow“ mit Modus `test`. Das geht denselben Weg wie abends um 21:00 Uhr,
+  ignoriert aber Uhrzeit und Tagesstand.

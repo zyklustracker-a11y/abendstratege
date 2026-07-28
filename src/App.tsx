@@ -1,20 +1,85 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { User } from 'firebase/auth'
 import { AppHeader } from './components/AppHeader'
 import { ConfirmDialog, type ConfirmRequest } from './components/ConfirmDialog'
+import { LoginScreen } from './components/LoginScreen'
 import { MorgenView } from './components/MorgenView'
 import { ReflectView } from './components/reflect/ReflectView'
 import { RueckblickView } from './components/RueckblickView'
+import { SettingsView } from './components/SettingsView'
 import { SetupScreen } from './components/SetupScreen'
 import { ZieleView } from './components/ZieleView'
+import { useAuth } from './lib/auth'
+import { firebaseConfigured } from './lib/firebase-config'
+import { registerServiceWorker, syncPushDevice } from './lib/push'
 import { useStore } from './lib/store'
 import type { Filter, Stage, View } from './lib/types'
 
+/** Startansicht: Ein Tipp auf die Benachrichtigung führt direkt in die Reflexion. */
+function initialView(): View {
+  const requested = new URLSearchParams(window.location.search).get('view')
+  const allowed: View[] = ['reflect', 'morgen', 'rueck', 'ziele', 'einstellungen']
+  return allowed.includes(requested as View) ? (requested as View) : 'reflect'
+}
+
 export default function App() {
-  const store = useStore()
+  const { user, pending, error } = useAuth()
+
+  useEffect(() => {
+    void registerServiceWorker()
+  }, [])
+
+  if (!firebaseConfigured) {
+    return (
+      <div className="app">
+        <div className="login">
+          <div className="login__inner">
+            <h1 className="login__title">Fast fertig</h1>
+            <p className="login__lead">
+              Die Zugangsdaten des Firebase-Projekts fehlen noch. Sie gehören in
+              <code> src/lib/firebase-config.ts</code> – die Anleitung dazu steht in
+              <code> SETUP.md</code>.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (pending) {
+    return (
+      <div className="app">
+        <div className="login">
+          <div className="login__inner">
+            <p className="login__lead">Einen Moment …</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="app">
+        <LoginScreen />
+        {error && (
+          <p className="login__error" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  return <SignedInApp user={user} />
+}
+
+function SignedInApp({ user }: { user: User }) {
+  const store = useStore(user)
   const { data } = store
 
   // Ansichtszustand: bewusst nicht persistiert – jeder Abend beginnt beim Auftakt.
-  const [view, setView] = useState<View>('reflect')
+  const [view, setView] = useState<View>(initialView)
   const [stage, setStage] = useState<Stage>('intro')
   const [runId, setRunId] = useState<string | null>(null)
   const [runStep, setRunStep] = useState(0)
@@ -22,6 +87,30 @@ export default function App() {
   const [filter, setFilter] = useState<Filter>('alle')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null)
+
+  /**
+   * Ein neues Gerät meldet sich selbst am Verteiler an, sobald die Erinnerung
+   * im Konto aktiv ist – ohne dass die Einstellung erneut gesetzt werden muss.
+   */
+  useEffect(() => {
+    if (store.ready && data.reminder.enabled) void syncPushDevice(user.uid)
+  }, [store.ready, data.reminder.enabled, user.uid])
+
+  if (!store.ready) {
+    return (
+      <div className="app">
+        <div className="login">
+          <div className="login__inner">
+            <p className="login__lead">
+              {store.status === 'fehler'
+                ? 'Deine Aufzeichnungen konnten nicht geladen werden. Prüfe die Verbindung und lade die Seite neu.'
+                : 'Deine Aufzeichnungen werden geladen …'}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!data.setupDone) {
     return (
@@ -48,7 +137,18 @@ export default function App() {
   return (
     <div className="app">
       <div className="shell">
-        <AppHeader view={view} streak={store.streak} onNavigate={setView} />
+        <AppHeader
+          view={view}
+          streak={store.streak}
+          status={store.status}
+          onNavigate={setView}
+        />
+
+        {store.migrated && (
+          <div className="edit-banner" role="status">
+            <span>Deine bisher in diesem Browser gespeicherten Abende wurden übernommen.</span>
+          </div>
+        )}
 
         {view === 'reflect' && (
           <ReflectView
@@ -116,6 +216,15 @@ export default function App() {
             onGoal={store.setAreaGoal}
             onAdd={store.addArea}
             onRemove={store.removeArea}
+            onConfirm={setConfirmRequest}
+          />
+        )}
+
+        {view === 'einstellungen' && (
+          <SettingsView
+            user={user}
+            reminder={data.reminder}
+            onReminder={store.setReminder}
             onConfirm={setConfirmRequest}
           />
         )}

@@ -1,16 +1,32 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { User } from 'firebase/auth'
 import { iso, streakOf } from './date'
 import { emptyDraft, emptyHieb } from './factories'
 import { newId } from './id'
-import { loadState, saveState } from './storage'
-import type { Area, Draft, Entry, Hieb, PersistedState } from './types'
+import { createRemote, loadRemote, persistRemote, saveProfile } from './remote'
+import {
+  emptyState,
+  hasLocalState,
+  loadCache,
+  loadLocalState,
+  saveCache,
+} from './storage'
+import type { Area, Draft, Entry, Hieb, PersistedState, Reminder, SyncStatus } from './types'
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
+/** Wie lange nach der letzten Eingabe gewartet wird, bevor geschrieben wird. */
+const SAVE_DELAY = 800
+
 export interface Store {
   data: PersistedState
+  /** Solange false, ist der Stand des Kontos noch unterwegs. */
+  ready: boolean
+  status: SyncStatus
+  /** true, wenn beim ersten Login ein lokaler Stand übernommen wurde. */
+  migrated: boolean
   streak: number
   todayEntry: Entry | undefined
   /** Bereiche */
@@ -33,14 +49,129 @@ export interface Store {
   updateHieb: (date: string, hiebId: string, patch: Partial<Hieb>) => void
   toggleHieb: (date: string, hiebId: string) => void
   removeHieb: (date: string, hiebId: string) => void
+  /** Einstellungen */
+  setReminder: (patch: Partial<Reminder>) => void
 }
 
-export function useStore(): Store {
-  const [data, setData] = useState<PersistedState>(loadState)
+/**
+ * Der Zustand eines Kontos, gespiegelt aus Firestore.
+ *
+ * Geschrieben wird gebündelt und verzögert: Während des Tippens sammeln sich
+ * die Änderungen, erst nach einer kurzen Pause geht ein Schreibvorgang raus –
+ * und auch dann nur für die Dokumente, die sich wirklich verändert haben.
+ */
+export function useStore(user: User): Store {
+  const uid = user.uid
+  const [data, setData] = useState<PersistedState>(emptyState)
+  const [ready, setReady] = useState(false)
+  const [status, setStatus] = useState<SyncStatus>('laden')
+  const [migrated, setMigrated] = useState(false)
+
+  /** Letzter bestätigt geschriebener Stand – Grundlage des Abgleichs. */
+  const savedRef = useRef<PersistedState>(emptyState())
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Das Nutzerobjekt wechselt bei jeder Token-Erneuerung die Identität; als Ref
+  // löst das kein erneutes Laden des gesamten Kontos aus.
+  const userRef = useRef(user)
+  userRef.current = user
 
   useEffect(() => {
-    saveState(data)
-  }, [data])
+    let aborted = false
+    setReady(false)
+    setStatus('laden')
+
+    // Der lokale Spiegel bringt die App sofort mit Inhalt hoch.
+    const cached = loadCache(uid)
+    if (cached) setData(cached)
+
+    void (async () => {
+      try {
+        let remote = await loadRemote(uid)
+
+        if (!remote) {
+          // Erster Login dieses Kontos: vorhandene Browser-Daten übernehmen.
+          const local = hasLocalState() ? loadLocalState() : null
+          const seed = local ?? emptyState()
+          await createRemote(uid, seed)
+          remote = seed
+          if (local) setMigrated(true)
+        }
+
+        if (aborted) return
+        savedRef.current = clone(remote)
+        setData(remote)
+        saveCache(uid, remote)
+        setReady(true)
+        setStatus('bereit')
+        void saveProfile(userRef.current).catch(() => undefined)
+      } catch {
+        if (aborted) return
+        // Ohne Verbindung wird mit dem lokalen Spiegel weitergearbeitet.
+        if (cached) {
+          savedRef.current = clone(cached)
+          setReady(true)
+          setStatus('offline')
+        } else {
+          setStatus('fehler')
+        }
+      }
+    })()
+
+    return () => {
+      aborted = true
+    }
+  }, [uid])
+
+  // Speichern: verzögert, gebündelt, und nur bei echten Änderungen.
+  useEffect(() => {
+    if (!ready) return
+    saveCache(uid, data)
+    if (JSON.stringify(data) === JSON.stringify(savedRef.current)) return
+
+    setStatus('speichert')
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      const snapshot = clone(data)
+      persistRemote(uid, savedRef.current, snapshot)
+        .then(() => {
+          savedRef.current = snapshot
+          setStatus('gespeichert')
+        })
+        .catch(() => {
+          setStatus(navigator.onLine ? 'fehler' : 'offline')
+        })
+    }, SAVE_DELAY)
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [data, ready, uid])
+
+  // Zurück im Netz: den letzten Stand nachreichen.
+  useEffect(() => {
+    const retry = () => {
+      if (!ready) return
+      if (JSON.stringify(data) === JSON.stringify(savedRef.current)) {
+        setStatus('bereit')
+        return
+      }
+      const snapshot = clone(data)
+      persistRemote(uid, savedRef.current, snapshot)
+        .then(() => {
+          savedRef.current = snapshot
+          setStatus('gespeichert')
+        })
+        .catch(() => setStatus('fehler'))
+    }
+    const lost = () => setStatus('offline')
+
+    window.addEventListener('online', retry)
+    window.addEventListener('offline', lost)
+    return () => {
+      window.removeEventListener('online', retry)
+      window.removeEventListener('offline', lost)
+    }
+  }, [data, ready, uid])
 
   const patchEntry = useCallback((date: string, mutate: (entry: Entry) => void) => {
     setData((s) => {
@@ -193,6 +324,10 @@ export function useStore(): Store {
     [patchEntry],
   )
 
+  const setReminder = useCallback((patch: Partial<Reminder>) => {
+    setData((s) => ({ ...s, reminder: { ...s.reminder, ...patch } }))
+  }, [])
+
   const streak = useMemo(() => streakOf(data.entries.map((e) => e.date)), [data.entries])
   const today = iso()
   const todayEntry = useMemo(
@@ -202,6 +337,9 @@ export function useStore(): Store {
 
   return {
     data,
+    ready,
+    status,
+    migrated,
     streak,
     todayEntry,
     addArea,
@@ -219,5 +357,6 @@ export function useStore(): Store {
     updateHieb,
     toggleHieb,
     removeHieb,
+    setReminder,
   }
 }

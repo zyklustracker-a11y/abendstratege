@@ -1,0 +1,56 @@
+name: Abend-Erinnerung
+
+# Ersetzt eine Cloud Function: Der Versand läuft als geplanter Job im Repo und
+# bleibt damit im kostenlosen Rahmen – ohne hinterlegte Zahlungsmethode.
+#
+# Der Takt ist bewusst enger als die Erinnerung selbst: Der Job prüft alle
+# 15 Minuten, wessen eingestellte Uhrzeit inzwischen erreicht ist. Nur so
+# funktionieren beliebige Uhrzeiten und Zeitzonen mit einem einzigen Zeitplan.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      modus:
+        description: 'plan = nur fällige Erinnerungen, test = sofort senden'
+        type: choice
+        options: [plan, test]
+        default: test
+      nur_email:
+        description: 'Im Testmodus optional auf eine E-Mail-Adresse begrenzen'
+        type: string
+        required: false
+
+# Ein verspäteter Lauf soll den nächsten nicht überholen.
+concurrency:
+  group: abend-erinnerung
+  cancel-in-progress: false
+
+jobs:
+  senden:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: scripts/package-lock.json
+
+      - name: Abhängigkeiten installieren
+        working-directory: scripts
+        run: npm ci --omit=dev
+
+      - name: Erinnerungen verschicken
+        working-directory: scripts
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          MODUS: ${{ inputs.modus || 'plan' }}
+          NUR_EMAIL: ${{ inputs.nur_email }}
+        run: node send-reminders.mjs

@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// Sicherheitsregeln des Abendstrategen.
+//
+// Grundsatz: Jedes Konto sieht ausschließlich seinen eigenen Zweig. Es gibt
+// keine Abfrage, mit der ein angemeldeter Nutzer an fremde Daten käme – auch
+// nicht lesend. Der Versand-Job läuft über das Admin-SDK und umgeht diese
+// Regeln bewusst; er ist der einzige Zugang, der kontoübergreifend liest.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function ownDocument(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read, write: if ownDocument(uid);
+
+      // Abende, Push-Geräte und alles Weitere unterhalb des Kontos.
+      match /{document=**} {
+        allow read, write: if ownDocument(uid);
+      }
+    }
+
+    // Alles außerhalb der Konten bleibt zu.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
