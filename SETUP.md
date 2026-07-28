@@ -146,6 +146,34 @@ Ohne diesen Schritt verweigert Google die Anmeldung auf der echten Adresse.
 2. **„Domain hinzufügen“** → `DEIN-PROJEKT.web.app`.
 3. Das Gleiche noch einmal für `DEIN-PROJEKT.firebaseapp.com`.
 
+## 10b. Rückkehr-Adresse beim OAuth-Client nachtragen
+
+Das ist eine **zweite, davon unabhängige Liste** – und die häufigste Stelle, an
+der die Anmeldung trotz Schritt 10 noch scheitert.
+
+Firebase legt beim Aktivieren des Google-Logins automatisch einen OAuth-Client
+an und trägt dort nur `DEIN-PROJEKT.firebaseapp.com` als Rückkehr-Adresse ein.
+Die App läuft aber unter `DEIN-PROJEKT.web.app` (siehe `authDomain` in
+`src/lib/firebase-config.ts`) – diese Adresse fehlt dort und muss nachgetragen
+werden. Sonst antwortet Google mit **„Zugriff blockiert: Die Anfrage dieser App
+ist ungültig – Fehler 400: redirect_uri_mismatch“**.
+
+1. Öffne
+   `https://console.cloud.google.com/apis/credentials?project=DEIN-PROJEKT`
+2. Abschnitt **„OAuth 2.0-Client-IDs“** → auf den Namen klicken (meist
+   **„Web client (auto created by Google Service)“**).
+3. Runterscrollen zu **„Autorisierte Weiterleitungs-URIs“** →
+   **„+ URI HINZUFÜGEN“**.
+4. Exakt eintragen – nach `.app` folgt Schrägstrich, **zwei Unterstriche**,
+   Schrägstrich:
+
+   ```
+   https://DEIN-PROJEKT.web.app/__/auth/handler
+   ```
+
+5. **Speichern**. Die Änderung greift meist sofort, gelegentlich dauert es
+   einige Minuten.
+
 ## 11. Nichts zu tun – aber gut zu wissen
 
 Der Erinnerungs-Job läuft alle 15 Minuten. Dein Repo ist bereits **öffentlich**,
