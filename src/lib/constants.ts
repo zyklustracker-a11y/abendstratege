@@ -1,6 +1,5 @@
-import type { AreaKey, Goals } from './types'
-
-export const AREAS: ReadonlyArray<readonly [AreaKey, string]> = [
+/** Vorschlag für den ersten Start – ab dann verwaltet der Nutzer die Bereiche selbst. */
+export const DEFAULT_AREAS: ReadonlyArray<readonly [string, string]> = [
   ['sport', 'Sportlich'],
   ['business', 'Business'],
   ['mindset', 'Mindset'],
@@ -16,7 +15,7 @@ export const LEVEL_QUESTIONS = [
   'Was bedeutet das im großen Bild für dich?',
 ] as const
 
-export const GOAL_PLACEHOLDERS: Goals = {
+export const GOAL_PLACEHOLDERS: Record<string, string> = {
   sport: 'z. B. Dreimal pro Woche trainieren – konsequent, nicht perfekt.',
   business: 'z. B. Mein Geschäft dieses Jahr um 20 % wachsen lassen.',
   mindset: 'z. B. Gelassen bleiben und aus Reflexion statt Reflex handeln.',
@@ -24,18 +23,10 @@ export const GOAL_PLACEHOLDERS: Goals = {
   familie: 'z. B. Ungeteilte Präsenz für meine Familie – jeden Tag.',
 }
 
-export const EMPTY_GOALS: Goals = {
-  sport: '',
-  business: '',
-  mindset: '',
-  religion: '',
-  familie: '',
-}
+export const GOAL_PLACEHOLDER_FALLBACK = 'Dein übergeordnetes Ziel in diesem Bereich.'
 
-/** Schritte A–F plus der optionale Schritt „Weitere Erfolge“. */
-export const STEP_COUNT = 7
-export const EXTRAS_STEP = 6
+/** Schritte eines Bereichs-Durchlaufs: Erfolg, Ebenen, Warum, Ausweiten, Next Steps. */
+export const RUN_STEPS = 5
 
-export function areaLabel(key: string): string {
-  return AREAS.find(([k]) => k === key)?.[1] ?? ''
-}
+/** Mehr als fünf Handlungen für einen Tag wären keine Auswahl mehr. */
+export const MAX_HIEBE = 5

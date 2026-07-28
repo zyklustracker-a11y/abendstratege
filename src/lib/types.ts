@@ -1,53 +1,72 @@
-export type AreaKey = 'sport' | 'business' | 'mindset' | 'religion' | 'familie'
+/** Ein Lebensbereich mit seinem übergeordneten Leitziel. Beides gehört zusammen. */
+export interface Area {
+  id: string
+  name: string
+  goal: string
+  /**
+   * Gelöschte Bereiche werden archiviert statt entfernt, damit alte Einträge,
+   * die auf sie zeigen, vollständig lesbar bleiben.
+   */
+  archived?: boolean
+}
 
-export type Goals = Record<AreaKey, string>
+/** Ein Bereichs-Durchlauf: ein Erfolg, in fünf Ebenen vertieft. */
+export interface AreaReflection {
+  id: string
+  areaId: string
+  success: string
+  levels: string[]
+  why: string
+  expand: string
+  nextSteps: string[]
+}
 
-/** Eine der fünf Handlungen für den nächsten Tag. */
+/** Woher ein Eintrag der Tagesliste stammt. */
+export type HiebSource = 'reflection' | 'extra'
+
+/** Eine Handlung für den nächsten Tag. */
 export interface Hieb {
+  id: string
   text: string
   /** 'Morgens' | 'Mittags' | 'Abends' – leer, wenn nicht gesetzt. */
   slot: string
   /** 'HH:MM' – leer, wenn nicht gesetzt. */
   time: string
   done: boolean
+  /** 'reflection' aus der Abendreflexion, 'extra' im Morgen-Blick ergänzt. */
+  source: HiebSource
 }
 
-/** Zusätzlicher Erfolg in Kurzform, ohne Fünf-Ebenen-Vertiefung. */
-export interface Extra {
-  text: string
-  area: AreaKey | ''
-}
-
+/** Ein Abend: beliebig viele Bereichs-Reflexionen, eine gemeinsame Hieb-Liste. */
 export interface Entry {
-  /** ISO-Datum (YYYY-MM-DD), zugleich fachlicher Schlüssel: eine Reflexion pro Tag. */
+  /** ISO-Datum (YYYY-MM-DD) und zugleich fachlicher Schlüssel: ein Eintrag pro Tag. */
   date: string
-  area: AreaKey | ''
-  success: string
-  levels: string[]
-  why: string
-  expand: string
-  nextSteps: string[]
+  reflections: AreaReflection[]
   hiebe: Hieb[]
-  extras: Extra[]
+  /** Optionale Notiz, die beim späteren Zurücklesen entsteht. */
+  insight: string
 }
 
-/** Reflexion in Arbeit – wird bei jeder Eingabe zwischengespeichert. */
-export interface Draft extends Entry {
-  /** Tag, an dem der Entwurf begonnen wurde; verfällt am nächsten Tag. */
-  _date: string
-}
+/** Die begonnene, noch nicht abgeschlossene Reflexion. */
+export type Draft = Entry
 
-/** Der in localStorage abgelegte Zustand. */
 export interface PersistedState {
-  goals: Goals
-  setupDone: boolean
+  version: number
+  areas: Area[]
   entries: Entry[]
-  formula: string[]
-  /** Kalenderwoche, für die der Wochenimpuls ausgeblendet wurde. */
-  impulseWeek: string
   draft: Draft | null
+  setupDone: boolean
+  /** Die Erfolgsformel wurde entfernt; alte Einträge bleiben unangetastet liegen. */
+  legacyFormula: string[]
 }
 
 export type View = 'reflect' | 'morgen' | 'rueck' | 'ziele'
-export type Stage = 'intro' | 'steps' | 'done'
-export type Filter = AreaKey | 'alle'
+
+/**
+ * Ablauf eines Abends: Auftakt → Bereich wählen → Durchlauf → „noch ein Bereich?“
+ * → gemeinsame Hiebe → Abschluss.
+ */
+export type Stage = 'intro' | 'pick' | 'run' | 'more' | 'hiebe' | 'done'
+
+/** 'alle' oder die id eines Lebensbereichs. */
+export type Filter = string

@@ -1,34 +1,82 @@
-import type { AreaKey, Goals } from '../lib/types'
-import { GoalFields } from './GoalFields'
+import { GOAL_PLACEHOLDERS, GOAL_PLACEHOLDER_FALLBACK } from '../lib/constants'
+import { activeAreas } from '../lib/selectors'
+import type { Area } from '../lib/types'
+import type { ConfirmRequest } from './ConfirmDialog'
 
 interface Props {
-  draft: Goals
-  saved: boolean
-  onChange: (area: AreaKey, value: string) => void
-  onSave: () => void
+  areas: Area[]
+  onRename: (areaId: string, name: string) => void
+  onGoal: (areaId: string, goal: string) => void
+  onAdd: () => void
+  onRemove: (areaId: string) => void
+  onConfirm: (request: ConfirmRequest) => void
 }
 
-/** Die fünf Leitziele – jederzeit einsehbar und bearbeitbar. */
-export function ZieleView({ draft, saved, onChange, onSave }: Props) {
+/** Lebensbereiche und ihre Leitziele – eine Liste, weil beides zusammengehört. */
+export function ZieleView({ areas, onRename, onGoal, onAdd, onRemove, onConfirm }: Props) {
+  const visible = activeAreas(areas)
+
   return (
     <div className="fade-in">
       <h2 className="view-title">Meine Ziele</h2>
       <p className="ziele__lead">
-        Deine fünf übergeordneten Leitziele. Jeder Erfolg wird an ihnen gemessen – halte sie scharf.
+        Deine Lebensbereiche und das jeweilige übergeordnete Ziel. Jeder Erfolg wird an ihnen
+        gemessen – halte sie scharf. Änderungen werden sofort gespeichert.
       </p>
 
-      <GoalFields idPrefix="ziele" values={draft} onChange={onChange} variant="ziele" />
-
-      <div className="ziele__actions">
-        <button type="button" className="btn-primary" onClick={onSave}>
-          Ziele speichern
-        </button>
-        {saved && (
-          <span className="ziele__saved" role="status">
-            Gespeichert.
-          </span>
-        )}
+      <div className="fields fields--ziele">
+        {visible.map((area) => (
+          <div className="field area-field" key={area.id}>
+            <div className="area-field__head">
+              <input
+                type="text"
+                className="area-field__name"
+                value={area.name}
+                placeholder="Name des Lebensbereichs"
+                aria-label="Name des Lebensbereichs"
+                onChange={(e) => onRename(area.id, e.target.value)}
+              />
+              <button
+                type="button"
+                className="icon-btn icon-btn--quiet"
+                title="Lebensbereich löschen"
+                aria-label={`Lebensbereich ${area.name || 'ohne Namen'} löschen`}
+                onClick={() =>
+                  onConfirm({
+                    title: 'Lebensbereich löschen?',
+                    text: `„${area.name || 'Ohne Namen'}“ verschwindet aus der Auswahl und aus „Meine Ziele“. Bereits reflektierte Abende bleiben vollständig erhalten und zeigen den Bereich künftig als archiviert.`,
+                    confirmLabel: 'Löschen',
+                    onConfirm: () => onRemove(area.id),
+                  })
+                }
+              >
+                ×
+              </button>
+            </div>
+            <textarea
+              className="goal-textarea"
+              rows={2}
+              value={area.goal}
+              placeholder={GOAL_PLACEHOLDERS[area.id] ?? GOAL_PLACEHOLDER_FALLBACK}
+              aria-label={`Ziel für ${area.name || 'diesen Bereich'}`}
+              onChange={(e) => onGoal(area.id, e.target.value)}
+            />
+          </div>
+        ))}
       </div>
+
+      {visible.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-state__title">Noch kein Lebensbereich.</div>
+          <p className="empty-state__text empty-state__text--narrow">
+            Lege den ersten an – er ist die Grundlage jeder Reflexion.
+          </p>
+        </div>
+      )}
+
+      <button type="button" className="btn-text btn-text--add" onClick={onAdd}>
+        + Lebensbereich hinzufügen
+      </button>
     </div>
   )
 }

@@ -1,36 +1,163 @@
-import { EMPTY_GOALS } from './constants'
-import type { PersistedState } from './types'
+import { DEFAULT_AREAS } from './constants'
+import { newId } from './id'
+import type { Area, Entry, Hieb, PersistedState } from './types'
 
 const KEY = 'abendstratege-v1'
+export const CURRENT_VERSION = 2
+
+export function defaultAreas(): Area[] {
+  return DEFAULT_AREAS.map(([id, name]) => ({ id, name, goal: '' }))
+}
 
 export function emptyState(): PersistedState {
   return {
-    goals: { ...EMPTY_GOALS },
-    setupDone: false,
+    version: CURRENT_VERSION,
+    areas: defaultAreas(),
     entries: [],
-    formula: [],
-    impulseWeek: '',
     draft: null,
+    setupDone: false,
+    legacyFormula: [],
   }
 }
 
-export function loadState(): PersistedState {
+function str(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function levelsOf(value: unknown): string[] {
+  const list = Array.isArray(value) ? value.map(str) : []
+  return Array.from({ length: 5 }, (_, i) => list[i] ?? '')
+}
+
+function hiebeOf(value: unknown): Hieb[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((h) => h && str(h.text).trim())
+    .map((h) => ({
+      id: str(h.id) || newId('hieb'),
+      text: str(h.text),
+      slot: str(h.slot),
+      time: str(h.time),
+      done: Boolean(h.done),
+      source: h.source === 'extra' ? 'extra' : 'reflection',
+    }))
+}
+
+/**
+ * Format 1 kannte genau einen Erfolg pro Abend plus „weitere Erfolge“ in Kurzform.
+ * Beides wird zu Bereichs-Reflexionen des neuen Formats – der Kurzform fehlen
+ * lediglich die Vertiefungen, die es dort nie gab.
+ */
+function migrateEntryV1(raw: Record<string, unknown>): Entry | null {
+  const date = str(raw.date)
+  if (!date) return null
+
+  const reflections = []
+  const success = str(raw.success).trim()
+  const levels = levelsOf(raw.levels)
+  if (success || levels.some((l) => l.trim())) {
+    reflections.push({
+      id: newId('refl'),
+      areaId: str(raw.area),
+      success,
+      levels,
+      why: str(raw.why),
+      expand: str(raw.expand),
+      nextSteps: Array.isArray(raw.nextSteps) ? raw.nextSteps.map(str).filter((s) => s.trim()) : [],
+    })
+  }
+  const extras = Array.isArray(raw.extras) ? raw.extras : []
+  for (const extra of extras) {
+    const text = str(extra?.text).trim()
+    if (!text) continue
+    reflections.push({
+      id: newId('refl'),
+      areaId: str(extra?.area),
+      success: text,
+      levels: ['', '', '', '', ''],
+      why: '',
+      expand: '',
+      nextSteps: [],
+    })
+  }
+  if (!reflections.length) return null
+
+  return { date, reflections, hiebe: hiebeOf(raw.hiebe), insight: str(raw.insight) }
+}
+
+function migrateV1(data: Record<string, unknown>): PersistedState {
+  const goals = (data.goals ?? {}) as Record<string, unknown>
+  const areas = DEFAULT_AREAS.map(([id, name]) => ({ id, name, goal: str(goals[id]) }))
+
+  const rawEntries = Array.isArray(data.entries) ? data.entries : []
+  const entries = rawEntries
+    .map((e) => migrateEntryV1((e ?? {}) as Record<string, unknown>))
+    .filter((e): e is Entry => e !== null)
+
+  const rawDraft = data.draft as Record<string, unknown> | null | undefined
+  const draft = rawDraft ? migrateEntryV1({ ...rawDraft, date: str(rawDraft._date) || str(rawDraft.date) }) : null
+
+  return {
+    version: CURRENT_VERSION,
+    areas,
+    entries,
+    draft,
+    setupDone: Boolean(data.setupDone),
+    legacyFormula: Array.isArray(data.formula) ? data.formula.map(str) : [],
+  }
+}
+
+function readV2(data: Record<string, unknown>): PersistedState {
   const state = emptyState()
-  let data: Partial<PersistedState> | null = null
+  if (Array.isArray(data.areas) && data.areas.length) {
+    state.areas = data.areas
+      .filter((a) => a && str(a.id))
+      .map((a) => ({
+        id: str(a.id),
+        name: str(a.name),
+        goal: str(a.goal),
+        ...(a.archived ? { archived: true } : {}),
+      }))
+  }
+  if (Array.isArray(data.entries)) {
+    state.entries = data.entries
+      .filter((e) => e && str(e.date))
+      .map((e) => ({
+        date: str(e.date),
+        reflections: Array.isArray(e.reflections)
+          ? e.reflections.map((r: Record<string, unknown>) => ({
+              id: str(r.id) || newId('refl'),
+              areaId: str(r.areaId),
+              success: str(r.success),
+              levels: levelsOf(r.levels),
+              why: str(r.why),
+              expand: str(r.expand),
+              nextSteps: Array.isArray(r.nextSteps) ? r.nextSteps.map(str) : [],
+            }))
+          : [],
+        hiebe: hiebeOf(e.hiebe),
+        insight: str(e.insight),
+      }))
+  }
+  if (data.draft && typeof data.draft === 'object') {
+    const [migrated] = readV2({ entries: [data.draft] }).entries
+    state.draft = migrated ?? null
+  }
+  state.setupDone = Boolean(data.setupDone)
+  if (Array.isArray(data.legacyFormula)) state.legacyFormula = data.legacyFormula.map(str)
+  return state
+}
+
+export function loadState(): PersistedState {
+  let data: Record<string, unknown> | null = null
   try {
     data = JSON.parse(localStorage.getItem(KEY) ?? 'null')
   } catch {
     data = null
   }
-  if (!data || typeof data !== 'object') return state
-
-  if (data.goals) state.goals = { ...state.goals, ...data.goals }
-  if (typeof data.setupDone === 'boolean') state.setupDone = data.setupDone
-  if (Array.isArray(data.entries)) state.entries = data.entries
-  if (Array.isArray(data.formula)) state.formula = data.formula
-  if (typeof data.impulseWeek === 'string') state.impulseWeek = data.impulseWeek
-  if (data.draft) state.draft = data.draft
-  return state
+  if (!data || typeof data !== 'object') return emptyState()
+  if (typeof data.version === 'number' && data.version >= 2) return readV2(data)
+  return migrateV1(data)
 }
 
 export function saveState(state: PersistedState): void {

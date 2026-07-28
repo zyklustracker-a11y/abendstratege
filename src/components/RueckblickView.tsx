@@ -1,47 +1,47 @@
-import { AREAS } from '../lib/constants'
-import { weekKey } from '../lib/date'
-import { sortedDesc, statsOf } from '../lib/selectors'
-import type { Entry, Filter } from '../lib/types'
+import { activeAreas, areaLabel, sortedDesc, statsOf, usedAreaIds } from '../lib/selectors'
+import type { Area, Entry, Filter } from '../lib/types'
+import type { ConfirmRequest } from './ConfirmDialog'
 import { EntryCard } from './EntryCard'
 
 interface Props {
   entries: Entry[]
-  formula: string[]
-  impulseWeek: string
+  areas: Area[]
   filter: Filter
   expandedId: string | null
-  formulaInput: string
   onFilter: (filter: Filter) => void
   onExpand: (date: string | null) => void
-  onFormulaInput: (value: string) => void
-  onAddFormula: () => void
-  onRemoveFormula: (index: number) => void
-  onDismissImpulse: () => void
+  onEditEntry: (date: string) => void
+  onDeleteEntry: (date: string) => void
+  onInsight: (date: string, insight: string) => void
   onGoReflect: () => void
+  onConfirm: (request: ConfirmRequest) => void
 }
 
 export function RueckblickView({
   entries,
-  formula,
-  impulseWeek,
+  areas,
   filter,
   expandedId,
-  formulaInput,
   onFilter,
   onExpand,
-  onFormulaInput,
-  onAddFormula,
-  onRemoveFormula,
-  onDismissImpulse,
+  onEditEntry,
+  onDeleteEntry,
+  onInsight,
   onGoReflect,
+  onConfirm,
 }: Props) {
   const hasEntries = entries.length > 0
-  const { counts, maxCount, hiebeTotal, hiebeDone } = statsOf(entries)
+  const { rows, maxCount, hiebeTotal, hiebeDone, reflectionCount } = statsOf(entries, areas)
+
+  // Archivierte Bereiche bleiben filterbar, solange sie noch in Einträgen vorkommen.
+  const used = usedAreaIds(entries)
+  const filterAreas = [
+    ...activeAreas(areas),
+    ...areas.filter((a) => a.archived && used.has(a.id)),
+  ]
+
   const visible = sortedDesc(entries).filter(
-    (e) =>
-      filter === 'alle' ||
-      e.area === filter ||
-      (e.extras ?? []).some((extra) => extra.area === filter),
+    (entry) => filter === 'alle' || entry.reflections.some((r) => r.areaId === filter),
   )
 
   return (
@@ -53,16 +53,16 @@ export function RueckblickView({
           <div className="card stats__areas">
             <div className="eyebrow eyebrow--muted">Erfolge nach Lebensbereich</div>
             <div className="stats__rows">
-              {AREAS.map(([key, label]) => (
-                <div className="stats__row" key={key}>
-                  <div className="stats__label">{label}</div>
+              {rows.map((row) => (
+                <div className="stats__row" key={row.areaId || 'ohne'}>
+                  <div className="stats__label">{row.label}</div>
                   <div className="stats__bar">
                     <div
                       className="stats__fill"
-                      style={{ width: `${Math.round((counts[key] / maxCount) * 100)}%` }}
+                      style={{ width: `${Math.round((row.count / maxCount) * 100)}%` }}
                     />
                   </div>
-                  <div className="stats__count">{counts[key]}</div>
+                  <div className="stats__count">{row.count}</div>
                 </div>
               ))}
             </div>
@@ -80,100 +80,58 @@ export function RueckblickView({
             <div className="card stats__card">
               <div className="eyebrow eyebrow--muted">Reflexionen</div>
               <div className="stats__value stats__value--plain">{entries.length}</div>
+              <div className="stats__sub">
+                {reflectionCount} {reflectionCount === 1 ? 'Bereich' : 'Bereiche'} insgesamt
+                vertieft
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      <div className="card formula">
-        <div className="eyebrow">Meine Erfolgsformel</div>
-        <p className="formula__lead">
-          Deine erkannten Erfolgsfaktoren – von dir gepflegt, über die Zeit gewachsen.
-        </p>
-
-        {impulseWeek !== weekKey() && (
-          <div className="impulse">
-            <div className="impulse__text">
-              Was hat dich diese Woche wirklich vorangebracht? Geh an den Ursprung und benenne den
-              Faktor.
-            </div>
-            <button
-              type="button"
-              className="impulse__close"
-              title="Für diese Woche ausblenden"
-              aria-label="Impuls für diese Woche ausblenden"
-              onClick={onDismissImpulse}
-            >
-              ×
-            </button>
-          </div>
-        )}
-
-        <div className="formula__list">
-          {formula.map((text, i) => (
-            <div className="formula__item" key={i}>
-              <div className="formula__body">
-                <span className="diamond" aria-hidden="true">
-                  ◆
-                </span>
-                <span className="formula__text">{text}</span>
-              </div>
-              <button
-                type="button"
-                className="formula__remove"
-                aria-label={`„${text}“ entfernen`}
-                onClick={() => onRemoveFormula(i)}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div className="formula__form">
-          <input
-            type="text"
-            className="formula-input row__input"
-            value={formulaInput}
-            placeholder="Neuen Erfolgsfaktor benennen …"
-            aria-label="Neuen Erfolgsfaktor benennen"
-            onChange={(e) => onFormulaInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') onAddFormula()
-            }}
-          />
-          <button type="button" className="btn-outline formula__submit" onClick={onAddFormula}>
-            Aufnehmen
-          </button>
-        </div>
-      </div>
-
       {hasEntries ? (
         <>
           <div className="filters">
-            {([['alle', 'Alle'], ...AREAS] as ReadonlyArray<readonly [Filter, string]>).map(
-              ([key, label]) => (
-                <button
-                  type="button"
-                  key={key}
-                  className={filter === key ? 'chip chip--sm chip--active' : 'chip chip--sm'}
-                  aria-pressed={filter === key}
-                  onClick={() => onFilter(key)}
-                >
-                  {label}
-                </button>
-              ),
-            )}
+            <button
+              type="button"
+              className={filter === 'alle' ? 'chip chip--sm chip--active' : 'chip chip--sm'}
+              aria-pressed={filter === 'alle'}
+              onClick={() => onFilter('alle')}
+            >
+              Alle
+            </button>
+            {filterAreas.map((area) => (
+              <button
+                type="button"
+                key={area.id}
+                className={filter === area.id ? 'chip chip--sm chip--active' : 'chip chip--sm'}
+                aria-pressed={filter === area.id}
+                onClick={() => onFilter(area.id)}
+              >
+                {areaLabel(areas, area.id)}
+              </button>
+            ))}
           </div>
+
           <div className="entries">
             {visible.map((entry) => (
               <EntryCard
                 key={entry.date}
                 entry={entry}
+                areas={areas}
                 expanded={expandedId === entry.date}
                 onToggle={() => onExpand(expandedId === entry.date ? null : entry.date)}
+                onEdit={() => onEditEntry(entry.date)}
+                onDelete={() => onDeleteEntry(entry.date)}
+                onInsight={(insight) => onInsight(entry.date, insight)}
+                onConfirm={onConfirm}
               />
             ))}
+            {visible.length === 0 && (
+              <p className="filters__empty">
+                In diesem Lebensbereich gibt es noch keine Reflexion.
+              </p>
+            )}
           </div>
         </>
       ) : (

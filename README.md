@@ -45,40 +45,67 @@ npm run preview  # Build lokal prüfen
 (GitHub Pages, Netlify, eigener Server). Die App lädt lediglich die beiden
 Schriften von Google Fonts nach; sonst geht nichts nach außen.
 
+## Der Abend im Ablauf
+
+1. **Bereich wählen** – in welchem Lebensbereich gab es heute einen Erfolg?
+2. **Durchlauf** für genau diesen Bereich: Erfolg → fünf Ebenen → Warum (mit
+   eingeblendetem Leitziel) → Ausweiten → Next Steps.
+3. **Noch ein Bereich?** Beliebig viele weitere Durchläufe; bereits reflektierte
+   Bereiche sind in der Auswahl markiert und lassen sich erneut öffnen.
+4. **Die Hiebe** – einmal für den ganzen nächsten Tag, höchstens fünf, mindestens
+   einer. Die Next Steps aller Durchläufe stehen als Vorlage bereit.
+5. **Abschluss** – alles wird als *ein* Tageseintrag gespeichert.
+
+Alles daraus bleibt änderbar: Ein Abend im Rückblick öffnet denselben Ablauf
+erneut, einzelne Durchläufe lassen sich entfernen, Hiebe bearbeiten.
+
 ## Aufbau
 
 ```
 index.html            Einstiegspunkt, Schriften, Meta-Daten
 src/
-  App.tsx             Rahmen: Ansichtszustand und Verteilung auf die vier Bereiche
+  App.tsx             Rahmen: Ansichtszustand, Verteilung auf die vier Bereiche
   styles.css          Design-Tokens (Farben, Schriften) und alle Komponenten-Styles
   lib/
-    types.ts          Datenmodell (Entry, Draft, Hieb, Goals …)
-    constants.ts      Lebensbereiche, die fünf Leitfragen, Platzhalter
+    types.ts          Datenmodell (Area, AreaReflection, Hieb, Entry …)
+    constants.ts      Vorschlagsbereiche, die fünf Leitfragen, Grenzwerte
+    factories.ts      Leere Reflexion, leerer Hieb, leerer Entwurf
     date.ts           Lokales Datum, deutsche Formate, Wochenschlüssel, Streak
-    storage.ts        Laden/Speichern unter dem Schlüssel `abendstratege-v1`
+    storage.ts        Laden, Speichern und Migration alter Datenstände
     store.ts          Zustand und alle schreibenden Aktionen (`useStore`)
-    selectors.ts      Ableitungen: Sortierung, Statistiken, Hieb-Zusatz
+    selectors.ts      Ableitungen: Sortierung, Statistiken, Bereichsnamen
   components/
     SetupScreen.tsx   Einmalige Einrichtung der fünf Leitziele
-    GoalFields.tsx    Zielfelder, geteilt von Einrichtung und „Meine Ziele“
     AppHeader.tsx     Titel, Streak-Anzeige, Navigation
-    reflect/          Abendreflexion: Auftakt, Schritte A–F (+ optional), Abschluss
-    MorgenView.tsx    Morgen-Blick mit abhakbaren Hieben
-    RueckblickView.tsx Statistiken, Erfolgsformel, Filter, Archiv
-    EntryCard.tsx     Ein Archiveintrag, aufklappbar
-    ZieleView.tsx     Leitziele bearbeiten
+    ConfirmDialog.tsx Rückfrage vor unwiderruflichen Schritten
+    reflect/          Auftakt, Bereichswahl, Durchlauf, Zwischenfrage, Hiebe, Abschluss
+    MorgenView.tsx    Tagesliste: Hiebe plus ergänzte To-dos
+    RueckblickView.tsx Auswertungen, Filter, Archiv
+    EntryCard.tsx     Ein Abend im Archiv, Bereiche einzeln aufklappbar
+    ZieleView.tsx     Lebensbereiche und Ziele verwalten
 ```
 
 ## Daten
 
 Alles liegt unter einem Schlüssel (`abendstratege-v1`) im `localStorage`:
-Leitziele, alle Reflexionen (eine pro Tag, Datum ist der fachliche Schlüssel),
-die Erfolgsformel, die zuletzt ausgeblendete Impuls-Woche und die begonnene, noch
-nicht abgeschlossene Reflexion. Der Entwurf wird bei jeder Eingabe gesichert –
-ein geschlossener Tab kostet keinen Satz.
+Lebensbereiche samt Leitziel, alle Abende (ein Eintrag pro Tag, mit beliebig
+vielen Bereichs-Reflexionen, einer gemeinsamen Hieb-Liste und einer optionalen
+Erkenntnis) sowie die begonnene, noch nicht abgeschlossene Reflexion. Der
+Entwurf wird bei jeder Eingabe gesichert – ein geschlossener Tab kostet keinen
+Satz.
 
-Abweichungen vom Prototyp: Die Vorschau-Schalter des Design-Tools
-(`demoDaten`, `startAnsicht`) sind bewusst nicht übernommen. Ergänzt wurden
+**Migration:** Datenstände aus der ersten Fassung (ein Erfolg pro Abend plus
+„weitere Erfolge“ in Kurzform) werden beim Laden automatisch in das neue Format
+überführt: Der Haupterfolg wird zur ersten Bereichs-Reflexion, jeder weitere
+Erfolg zu einer eigenen. Nichts geht verloren. Die entfernte „Erfolgsformel“
+bleibt als `legacyFormula` unangetastet im Speicher liegen, statt gelöscht zu
+werden.
+
+**Gelöschte Lebensbereiche** werden archiviert, sobald ein Eintrag auf sie zeigt;
+alte Abende bleiben lesbar und weisen den Bereich als „Archiviert: …“ aus. Nur
+nie benutzte Bereiche verschwinden vollständig.
+
+Abweichungen vom ursprünglichen Prototyp: Die Vorschau-Schalter des Design-Tools
+(`demoDaten`, `startAnsicht`) sind nicht übernommen. Ergänzt wurden
 Tastatur-Fokusringe, ARIA-Beschriftungen und einige dezente Hover-Zustände, die
 das Prototyp-Format nicht ausdrücken konnte.

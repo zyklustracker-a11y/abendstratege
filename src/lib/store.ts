@@ -1,22 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { iso, streakOf } from './date'
+import { emptyDraft, emptyHieb } from './factories'
+import { newId } from './id'
 import { loadState, saveState } from './storage'
-import type { Draft, Entry, Goals, PersistedState } from './types'
-
-export function emptyDraft(): Draft {
-  return {
-    _date: iso(),
-    date: iso(),
-    area: '',
-    success: '',
-    levels: ['', '', '', '', ''],
-    why: '',
-    expand: '',
-    nextSteps: [''],
-    hiebe: Array.from({ length: 5 }, () => ({ text: '', slot: '', time: '', done: false })),
-    extras: [],
-  }
-}
+import type { Area, Draft, Entry, Hieb, PersistedState } from './types'
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
@@ -25,20 +12,27 @@ function clone<T>(value: T): T {
 export interface Store {
   data: PersistedState
   streak: number
-  /** Die Reflexion des heutigen Tages, falls sie schon existiert. */
   todayEntry: Entry | undefined
-  finishSetup: (goals: Goals) => void
-  saveGoals: (goals: Goals) => void
-  /** Öffnet den heutigen Eintrag zum Bearbeiten oder legt einen neuen Entwurf an. */
-  beginDraft: () => void
+  /** Bereiche */
+  addArea: () => string
+  renameArea: (areaId: string, name: string) => void
+  setAreaGoal: (areaId: string, goal: string) => void
+  /** Löscht den Bereich – oder archiviert ihn, solange Einträge auf ihn zeigen. */
+  removeArea: (areaId: string) => void
+  finishSetup: (goals: Record<string, string>) => void
+  /** Reflexion */
+  beginDraft: (date: string) => void
   updateDraft: (mutate: (draft: Draft) => void) => void
-  /** Schreibt den Entwurf als Eintrag des heutigen Tages fest. */
+  discardDraft: () => void
   commitDraft: () => void
-  /** Hakt einen der Hiebe der jüngsten Reflexion ab. */
-  toggleHieb: (index: number) => void
-  addFormula: (text: string) => void
-  removeFormula: (index: number) => void
-  dismissImpulse: (week: string) => void
+  /** Einträge */
+  deleteEntry: (date: string) => void
+  setInsight: (date: string, insight: string) => void
+  /** Tagesliste */
+  addTodo: (date: string, text: string) => void
+  updateHieb: (date: string, hiebId: string, patch: Partial<Hieb>) => void
+  toggleHieb: (date: string, hiebId: string) => void
+  removeHieb: (date: string, hiebId: string) => void
 }
 
 export function useStore(): Store {
@@ -48,28 +42,69 @@ export function useStore(): Store {
     saveState(data)
   }, [data])
 
-  const today = iso()
-
-  const finishSetup = useCallback((goals: Goals) => {
-    setData((s) => ({ ...s, goals: { ...goals }, setupDone: true }))
-  }, [])
-
-  const saveGoals = useCallback((goals: Goals) => {
-    setData((s) => ({ ...s, goals: { ...goals } }))
-  }, [])
-
-  const beginDraft = useCallback(() => {
+  const patchEntry = useCallback((date: string, mutate: (entry: Entry) => void) => {
     setData((s) => {
-      const date = iso()
+      const index = s.entries.findIndex((e) => e.date === date)
+      if (index < 0) return s
+      const entries = clone(s.entries)
+      mutate(entries[index])
+      return { ...s, entries }
+    })
+  }, [])
+
+  const addArea = useCallback(() => {
+    const id = newId('area')
+    setData((s) => ({ ...s, areas: [...s.areas, { id, name: '', goal: '' }] }))
+    return id
+  }, [])
+
+  const renameArea = useCallback((areaId: string, name: string) => {
+    setData((s) => ({
+      ...s,
+      areas: s.areas.map((a) => (a.id === areaId ? { ...a, name } : a)),
+    }))
+  }, [])
+
+  const setAreaGoal = useCallback((areaId: string, goal: string) => {
+    setData((s) => ({
+      ...s,
+      areas: s.areas.map((a) => (a.id === areaId ? { ...a, goal } : a)),
+    }))
+  }, [])
+
+  const removeArea = useCallback((areaId: string) => {
+    setData((s) => {
+      const referenced =
+        s.entries.some((e) => e.reflections.some((r) => r.areaId === areaId)) ||
+        Boolean(s.draft?.reflections.some((r) => r.areaId === areaId))
+      const areas: Area[] = referenced
+        ? s.areas.map((a) => (a.id === areaId ? { ...a, archived: true } : a))
+        : s.areas.filter((a) => a.id !== areaId)
+      return { ...s, areas }
+    })
+  }, [])
+
+  const finishSetup = useCallback((goals: Record<string, string>) => {
+    setData((s) => ({
+      ...s,
+      setupDone: true,
+      areas: s.areas.map((a) => ({ ...a, goal: goals[a.id] ?? a.goal })),
+    }))
+  }, [])
+
+  const beginDraft = useCallback((date: string) => {
+    setData((s) => {
       const existing = s.entries.find((e) => e.date === date)
       let draft: Draft
       if (existing) {
-        draft = { ...clone(existing), _date: date }
-        if (!draft.nextSteps?.length) draft.nextSteps = ['']
-      } else if (s.draft && s.draft._date === date) {
+        draft = clone(existing)
+        // Im Morgen-Blick ergänzte To-dos gehören nicht in den Abend-Entwurf.
+        draft.hiebe = draft.hiebe.filter((h) => h.source === 'reflection')
+        if (!draft.hiebe.length) draft.hiebe = [emptyHieb()]
+      } else if (s.draft && s.draft.date === date) {
         draft = s.draft
       } else {
-        draft = emptyDraft()
+        draft = emptyDraft(date)
       }
       return { ...s, draft }
     })
@@ -77,60 +112,89 @@ export function useStore(): Store {
 
   const updateDraft = useCallback((mutate: (draft: Draft) => void) => {
     setData((s) => {
-      const draft = clone(s.draft ?? emptyDraft())
+      if (!s.draft) return s
+      const draft = clone(s.draft)
       mutate(draft)
       return { ...s, draft }
     })
   }, [])
 
+  const discardDraft = useCallback(() => {
+    setData((s) => ({ ...s, draft: null }))
+  }, [])
+
   const commitDraft = useCallback(() => {
     setData((s) => {
-      const d = s.draft
-      if (!d || !d.success.trim()) return s
-      const entry: Entry = {
-        date: iso(),
-        area: d.area,
-        success: d.success.trim(),
-        levels: d.levels,
-        why: d.why,
-        expand: d.expand,
-        nextSteps: d.nextSteps.filter((step) => step.trim()),
-        hiebe: d.hiebe,
-        extras: d.extras.filter((x) => x.text.trim()),
+      const draft = s.draft
+      if (!draft) return s
+      const reflections = draft.reflections
+        .filter((r) => r.success.trim())
+        .map((r) => ({ ...r, nextSteps: r.nextSteps.filter((step) => step.trim()) }))
+      const hiebe = draft.hiebe.filter((h) => h.text.trim())
+      if (!reflections.length || !hiebe.length) return s
+
+      const entry: Entry = { date: draft.date, reflections, hiebe, insight: draft.insight }
+      // Beim Bearbeiten eines bestehenden Abends bleiben nachträgliche To-dos erhalten.
+      const previous = s.entries.find((e) => e.date === draft.date)
+      const keptExtras = (previous?.hiebe ?? []).filter(
+        (h) => h.source === 'extra' && !hiebe.some((n) => n.id === h.id),
+      )
+      entry.hiebe = [...hiebe, ...keptExtras]
+
+      return {
+        ...s,
+        entries: s.entries.filter((e) => e.date !== entry.date).concat([entry]),
+        draft: null,
       }
-      const entries = s.entries.filter((e) => e.date !== entry.date).concat([entry])
-      return { ...s, entries, draft: null }
     })
   }, [])
 
-  const toggleHieb = useCallback((index: number) => {
-    setData((s) => {
-      if (!s.entries.length) return s
-      const entries = clone(s.entries)
-      entries.sort((a, b) => (a.date < b.date ? -1 : 1))
-      const last = entries[entries.length - 1]
-      const hieb = last.hiebe[index]
-      if (!hieb) return s
-      hieb.done = !hieb.done
-      return { ...s, entries }
-    })
+  const deleteEntry = useCallback((date: string) => {
+    setData((s) => ({ ...s, entries: s.entries.filter((e) => e.date !== date) }))
   }, [])
 
-  const addFormula = useCallback((text: string) => {
-    const value = text.trim()
-    if (!value) return
-    setData((s) => ({ ...s, formula: [...s.formula, value] }))
-  }, [])
+  const setInsight = useCallback(
+    (date: string, insight: string) => patchEntry(date, (entry) => void (entry.insight = insight)),
+    [patchEntry],
+  )
 
-  const removeFormula = useCallback((index: number) => {
-    setData((s) => ({ ...s, formula: s.formula.filter((_, i) => i !== index) }))
-  }, [])
+  const addTodo = useCallback(
+    (date: string, text: string) => {
+      const value = text.trim()
+      if (!value) return
+      patchEntry(date, (entry) => void entry.hiebe.push({ ...emptyHieb('extra'), text: value }))
+    },
+    [patchEntry],
+  )
 
-  const dismissImpulse = useCallback((week: string) => {
-    setData((s) => ({ ...s, impulseWeek: week }))
-  }, [])
+  const updateHieb = useCallback(
+    (date: string, hiebId: string, patch: Partial<Hieb>) =>
+      patchEntry(date, (entry) => {
+        const hieb = entry.hiebe.find((h) => h.id === hiebId)
+        if (hieb) Object.assign(hieb, patch)
+      }),
+    [patchEntry],
+  )
+
+  const toggleHieb = useCallback(
+    (date: string, hiebId: string) =>
+      patchEntry(date, (entry) => {
+        const hieb = entry.hiebe.find((h) => h.id === hiebId)
+        if (hieb) hieb.done = !hieb.done
+      }),
+    [patchEntry],
+  )
+
+  const removeHieb = useCallback(
+    (date: string, hiebId: string) =>
+      patchEntry(date, (entry) => {
+        entry.hiebe = entry.hiebe.filter((h) => h.id !== hiebId)
+      }),
+    [patchEntry],
+  )
 
   const streak = useMemo(() => streakOf(data.entries.map((e) => e.date)), [data.entries])
+  const today = iso()
   const todayEntry = useMemo(
     () => data.entries.find((e) => e.date === today),
     [data.entries, today],
@@ -140,14 +204,20 @@ export function useStore(): Store {
     data,
     streak,
     todayEntry,
+    addArea,
+    renameArea,
+    setAreaGoal,
+    removeArea,
     finishSetup,
-    saveGoals,
     beginDraft,
     updateDraft,
+    discardDraft,
     commitDraft,
-    addFormula,
-    removeFormula,
-    dismissImpulse,
+    deleteEntry,
+    setInsight,
+    addTodo,
+    updateHieb,
     toggleHieb,
+    removeHieb,
   }
 }

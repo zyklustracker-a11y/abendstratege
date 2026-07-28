@@ -1,22 +1,33 @@
-import { LEVEL_QUESTIONS, areaLabel } from '../lib/constants'
+import { useState } from 'react'
+import { LEVEL_QUESTIONS } from '../lib/constants'
 import { formatShort } from '../lib/date'
-import { hiebMeta } from '../lib/selectors'
-import type { Entry } from '../lib/types'
+import { areaLabel, hiebMeta } from '../lib/selectors'
+import type { Area, AreaReflection, Entry } from '../lib/types'
+import type { ConfirmRequest } from './ConfirmDialog'
 
 interface Props {
   entry: Entry
+  areas: Area[]
   expanded: boolean
   onToggle: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onInsight: (insight: string) => void
+  onConfirm: (request: ConfirmRequest) => void
 }
 
-/** Ein Archiveintrag – Kopfzeile immer sichtbar, Details aufklappbar. */
-export function EntryCard({ entry, expanded, onToggle }: Props) {
-  const levels = LEVEL_QUESTIONS.map((q, i) => ({ q, a: (entry.levels[i] ?? '').trim() })).filter(
-    (l) => l.a,
-  )
-  const hiebe = (entry.hiebe ?? []).filter((h) => h.text.trim())
-  const nextSteps = entry.nextSteps ?? []
-  const extras = entry.extras ?? []
+/** Ein Abend im Archiv: alle Bereiche einzeln aufklappbar, mit Platz für eine Erkenntnis. */
+export function EntryCard({
+  entry,
+  areas,
+  expanded,
+  onToggle,
+  onEdit,
+  onDelete,
+  onInsight,
+  onConfirm,
+}: Props) {
+  const [openReflections, setOpenReflections] = useState<string[]>([])
 
   return (
     <div className="entry">
@@ -24,9 +35,15 @@ export function EntryCard({ entry, expanded, onToggle }: Props) {
         <div className="entry__main">
           <div className="entry__meta">
             <span className="entry__date">{formatShort(entry.date)}</span>
-            <span className="entry__badge">{areaLabel(entry.area) || '—'}</span>
+            {entry.reflections.map((reflection) => (
+              <span className="entry__badge" key={reflection.id}>
+                {areaLabel(areas, reflection.areaId)}
+              </span>
+            ))}
           </div>
-          <div className="entry__success">{entry.success}</div>
+          <div className="entry__success">
+            {entry.reflections[0]?.success || 'Ohne Erfolg festgehalten'}
+          </div>
         </div>
         <div className="entry__chevron" aria-hidden="true">
           {expanded ? '–' : '+'}
@@ -35,6 +52,110 @@ export function EntryCard({ entry, expanded, onToggle }: Props) {
 
       {expanded && (
         <div className="entry__body">
+          {entry.reflections.map((reflection) => (
+            <ReflectionBlock
+              key={reflection.id}
+              reflection={reflection}
+              areas={areas}
+              open={openReflections.includes(reflection.id)}
+              onToggle={() =>
+                setOpenReflections((current) =>
+                  current.includes(reflection.id)
+                    ? current.filter((id) => id !== reflection.id)
+                    : [...current, reflection.id],
+                )
+              }
+            />
+          ))}
+
+          {entry.hiebe.length > 0 && (
+            <>
+              <div className="eyebrow eyebrow--sm eyebrow--muted entry__section-title">
+                Die Hiebe
+              </div>
+              <div className="entry__list entry__list--hiebe">
+                {entry.hiebe.map((hieb) => (
+                  <div className="entry__li entry__li--baseline" key={hieb.id}>
+                    <span className={hieb.done ? 'entry__mark entry__mark--done' : 'entry__mark'}>
+                      {hieb.done ? '✓' : '○'}
+                    </span>
+                    <span>
+                      {hieb.text} <span className="meta-note">{hiebMeta(hieb)}</span>
+                      {hieb.source === 'extra' && (
+                        <span className="meta-note"> · später ergänzt</span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <div className="eyebrow eyebrow--sm eyebrow--muted entry__section-title">Erkenntnis</div>
+          <textarea
+            className="level-textarea entry__insight"
+            rows={2}
+            value={entry.insight}
+            placeholder="Fällt dir beim Zurücklesen ein Muster auf? Notiere es hier."
+            aria-label={`Erkenntnis zum ${formatShort(entry.date)}`}
+            onChange={(e) => onInsight(e.target.value)}
+          />
+
+          <div className="entry__actions">
+            <button type="button" className="btn-text" onClick={onEdit}>
+              Diesen Abend bearbeiten
+            </button>
+            <button
+              type="button"
+              className="icon-btn icon-btn--quiet"
+              title="Eintrag löschen"
+              aria-label={`Eintrag vom ${formatShort(entry.date)} löschen`}
+              onClick={() =>
+                onConfirm({
+                  title: 'Eintrag löschen?',
+                  text: `Der Abend vom ${formatShort(entry.date)} wird mit allen Bereichen, Vertiefungen und Hieben entfernt. Das lässt sich nicht rückgängig machen.`,
+                  confirmLabel: 'Löschen',
+                  onConfirm: onDelete,
+                })
+              }
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface BlockProps {
+  reflection: AreaReflection
+  areas: Area[]
+  open: boolean
+  onToggle: () => void
+}
+
+/** Ein Bereichs-Durchlauf innerhalb eines Abends. */
+function ReflectionBlock({ reflection, areas, open, onToggle }: BlockProps) {
+  const levels = LEVEL_QUESTIONS.map((q, i) => ({ q, a: (reflection.levels[i] ?? '').trim() })).filter(
+    (l) => l.a,
+  )
+  const nextSteps = reflection.nextSteps.filter((s) => s.trim())
+
+  return (
+    <div className="reflection">
+      <button type="button" className="reflection__head" aria-expanded={open} onClick={onToggle}>
+        <div className="reflection__main">
+          <div className="eyebrow">{areaLabel(areas, reflection.areaId)}</div>
+          <div className="reflection__success">{reflection.success}</div>
+        </div>
+        <div className="entry__chevron" aria-hidden="true">
+          {open ? '–' : '+'}
+        </div>
+      </button>
+
+      {open && (
+        <div className="reflection__body">
           {levels.length > 0 && (
             <>
               <div className="eyebrow eyebrow--sm eyebrow--muted entry__section-title entry__section-title--levels">
@@ -51,21 +172,21 @@ export function EntryCard({ entry, expanded, onToggle }: Props) {
             </>
           )}
 
-          {entry.why?.trim() && (
+          {reflection.why.trim() && (
             <>
               <div className="eyebrow eyebrow--sm eyebrow--muted entry__section-title entry__section-title--text">
                 Warum es ein Erfolg ist
               </div>
-              <div className="entry__text">{entry.why}</div>
+              <div className="entry__text">{reflection.why}</div>
             </>
           )}
 
-          {entry.expand?.trim() && (
+          {reflection.expand.trim() && (
             <>
               <div className="eyebrow eyebrow--sm eyebrow--muted entry__section-title entry__section-title--text">
                 Ausweiten
               </div>
-              <div className="entry__text">{entry.expand}</div>
+              <div className="entry__text">{reflection.expand}</div>
             </>
           )}
 
@@ -79,44 +200,6 @@ export function EntryCard({ entry, expanded, onToggle }: Props) {
                   <div className="entry__li" key={i}>
                     <span className="entry__dash">–</span>
                     {step}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {hiebe.length > 0 && (
-            <>
-              <div className="eyebrow eyebrow--sm eyebrow--muted entry__section-title">
-                Die fünf Hiebe
-              </div>
-              <div className="entry__list entry__list--hiebe">
-                {hiebe.map((hieb, i) => (
-                  <div className="entry__li entry__li--baseline" key={i}>
-                    <span className={hieb.done ? 'entry__mark entry__mark--done' : 'entry__mark'}>
-                      {hieb.done ? '✓' : '○'}
-                    </span>
-                    <span>
-                      {hieb.text} <span className="meta-note">{hiebMeta(hieb)}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {extras.length > 0 && (
-            <>
-              <div className="eyebrow eyebrow--sm eyebrow--muted entry__section-title">
-                Weitere Erfolge
-              </div>
-              <div className="entry__list">
-                {extras.map((extra, i) => (
-                  <div className="entry__li entry__li--baseline" key={i}>
-                    <span className="diamond">◆</span>
-                    <span>
-                      {extra.text} <span className="meta-note">{areaLabel(extra.area)}</span>
-                    </span>
                   </div>
                 ))}
               </div>

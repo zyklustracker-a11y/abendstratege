@@ -1,15 +1,18 @@
 import { useState } from 'react'
-import { AREAS, EMPTY_GOALS } from '../lib/constants'
-import type { AreaKey, Goals } from '../lib/types'
-import { GoalFields } from './GoalFields'
+import { GOAL_PLACEHOLDERS, GOAL_PLACEHOLDER_FALLBACK } from '../lib/constants'
+import type { Area } from '../lib/types'
 
-/** Einmaliger erster Start: die fünf Leitziele festhalten. */
-export function SetupScreen({ onFinish }: { onFinish: (goals: Goals) => void }) {
-  const [draft, setDraft] = useState<Goals>(() => ({ ...EMPTY_GOALS }))
-  const ready = AREAS.every(([key]) => draft[key].trim())
+interface Props {
+  areas: Area[]
+  onFinish: (goals: Record<string, string>) => void
+}
 
-  const update = (area: AreaKey, value: string) =>
-    setDraft((current) => ({ ...current, [area]: value }))
+/** Einmaliger erster Start: je ein Leitziel für die fünf vorgeschlagenen Bereiche. */
+export function SetupScreen({ areas, onFinish }: Props) {
+  const [goals, setGoals] = useState<Record<string, string>>(() =>
+    Object.fromEntries(areas.map((a) => [a.id, a.goal])),
+  )
+  const ready = areas.every((a) => (goals[a.id] ?? '').trim())
 
   return (
     <div className="setup fade-in--slow">
@@ -21,16 +24,33 @@ export function SetupScreen({ onFinish }: { onFinish: (goals: Goals) => void }) 
       </h1>
       <p className="setup__lead">
         Definiere je ein übergeordnetes Ziel in fünf Lebensbereichen. Sie sind das Fundament dieser
-        App – jeder Erfolg wird später an ihnen gemessen. Du kannst sie jederzeit anpassen.
+        App – jeder Erfolg wird später an ihnen gemessen. Bereiche und Ziele kannst du später
+        jederzeit ändern, ergänzen oder entfernen.
       </p>
 
-      <GoalFields idPrefix="setup" values={draft} onChange={update} />
+      <div className="fields">
+        {areas.map((area) => (
+          <div className="field" key={area.id}>
+            <label className="eyebrow" htmlFor={`setup-${area.id}`}>
+              {area.name}
+            </label>
+            <textarea
+              id={`setup-${area.id}`}
+              className="goal-textarea"
+              rows={2}
+              value={goals[area.id] ?? ''}
+              placeholder={GOAL_PLACEHOLDERS[area.id] ?? GOAL_PLACEHOLDER_FALLBACK}
+              onChange={(e) => setGoals((current) => ({ ...current, [area.id]: e.target.value }))}
+            />
+          </div>
+        ))}
+      </div>
 
       <button
         type="button"
         className="btn-primary setup__submit"
         disabled={!ready}
-        onClick={() => ready && onFinish(draft)}
+        onClick={() => ready && onFinish(goals)}
       >
         Meine Ziele festhalten
       </button>
