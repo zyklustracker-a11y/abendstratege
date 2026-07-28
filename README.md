@@ -23,3 +23,62 @@ The design medium is **HTML/CSS/JS** — these are prototypes, not production co
 - `README.md` — this file
 - `chats/` — conversation transcripts (read these!)
 - `project/` — the `App zur Abendreflexion und Erfolgstrack` project files (HTML prototypes, assets, components)
+
+---
+
+# Der Abendstratege — Implementierung
+
+Das Design aus `project/Der Abendstratege.dc.html` ist in diesem Repository als
+lauffähige Web-App umgesetzt: **Vite + React + TypeScript**, alle Daten lokal im
+`localStorage`, kein Backend, keine Tracker.
+
+## Loslegen
+
+```bash
+npm install
+npm run dev      # Entwicklungsserver (http://localhost:5173)
+npm run build    # Produktionsbuild nach dist/
+npm run preview  # Build lokal prüfen
+```
+
+`dist/` ist ein rein statischer Ordner und kann auf jedem Webspace liegen
+(GitHub Pages, Netlify, eigener Server). Die App lädt lediglich die beiden
+Schriften von Google Fonts nach; sonst geht nichts nach außen.
+
+## Aufbau
+
+```
+index.html            Einstiegspunkt, Schriften, Meta-Daten
+src/
+  App.tsx             Rahmen: Ansichtszustand und Verteilung auf die vier Bereiche
+  styles.css          Design-Tokens (Farben, Schriften) und alle Komponenten-Styles
+  lib/
+    types.ts          Datenmodell (Entry, Draft, Hieb, Goals …)
+    constants.ts      Lebensbereiche, die fünf Leitfragen, Platzhalter
+    date.ts           Lokales Datum, deutsche Formate, Wochenschlüssel, Streak
+    storage.ts        Laden/Speichern unter dem Schlüssel `abendstratege-v1`
+    store.ts          Zustand und alle schreibenden Aktionen (`useStore`)
+    selectors.ts      Ableitungen: Sortierung, Statistiken, Hieb-Zusatz
+  components/
+    SetupScreen.tsx   Einmalige Einrichtung der fünf Leitziele
+    GoalFields.tsx    Zielfelder, geteilt von Einrichtung und „Meine Ziele“
+    AppHeader.tsx     Titel, Streak-Anzeige, Navigation
+    reflect/          Abendreflexion: Auftakt, Schritte A–F (+ optional), Abschluss
+    MorgenView.tsx    Morgen-Blick mit abhakbaren Hieben
+    RueckblickView.tsx Statistiken, Erfolgsformel, Filter, Archiv
+    EntryCard.tsx     Ein Archiveintrag, aufklappbar
+    ZieleView.tsx     Leitziele bearbeiten
+```
+
+## Daten
+
+Alles liegt unter einem Schlüssel (`abendstratege-v1`) im `localStorage`:
+Leitziele, alle Reflexionen (eine pro Tag, Datum ist der fachliche Schlüssel),
+die Erfolgsformel, die zuletzt ausgeblendete Impuls-Woche und die begonnene, noch
+nicht abgeschlossene Reflexion. Der Entwurf wird bei jeder Eingabe gesichert –
+ein geschlossener Tab kostet keinen Satz.
+
+Abweichungen vom Prototyp: Die Vorschau-Schalter des Design-Tools
+(`demoDaten`, `startAnsicht`) sind bewusst nicht übernommen. Ergänzt wurden
+Tastatur-Fokusringe, ARIA-Beschriftungen und einige dezente Hover-Zustände, die
+das Prototyp-Format nicht ausdrücken konnte.
