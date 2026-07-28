@@ -30,3 +30,9 @@ export const RUN_STEPS = 5
 
 /** Mehr als fünf Handlungen für einen Tag wären keine Auswahl mehr. */
 export const MAX_HIEBE = 5
+
+/** Voreinstellung der Abend-Erinnerung. */
+export const DEFAULT_REMINDER_TIME = '21:00'
+
+export const NOTIFICATION_TITLE = 'Der Abendstratege'
+export const NOTIFICATION_BODY = 'Nimm dir jetzt kurz Zeit für deine Reflexion.'

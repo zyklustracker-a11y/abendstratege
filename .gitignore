@@ -2,3 +2,12 @@ node_modules/
 dist/
 .DS_Store
 *.local
+
+# Lokale Konfiguration und Geheimnisse – gehören nie ins Repo.
+.env
+.env.*
+!.env.example
+service-account.json
+.firebase/
+firestore-debug.log
+ui-debug.log

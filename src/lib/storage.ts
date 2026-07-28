@@ -1,12 +1,26 @@
-import { DEFAULT_AREAS } from './constants'
+import { DEFAULT_AREAS, DEFAULT_REMINDER_TIME } from './constants'
 import { newId } from './id'
-import type { Area, Entry, Hieb, PersistedState } from './types'
+import type { Area, Entry, Hieb, PersistedState, Reminder } from './types'
 
+/** Der ursprüngliche, rein lokale Speicher. Bleibt als Quelle der Erstübernahme. */
 const KEY = 'abendstratege-v1'
 export const CURRENT_VERSION = 2
 
 export function defaultAreas(): Area[] {
   return DEFAULT_AREAS.map(([id, name]) => ({ id, name, goal: '' }))
+}
+
+export function defaultReminder(): Reminder {
+  return { enabled: false, time: DEFAULT_REMINDER_TIME, timeZone: deviceTimeZone() }
+}
+
+/** Zeitzone des Geräts – Grundlage dafür, dass 21:00 Uhr auch 21:00 Uhr heißt. */
+export function deviceTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Berlin'
+  } catch {
+    return 'Europe/Berlin'
+  }
 }
 
 export function emptyState(): PersistedState {
@@ -17,6 +31,7 @@ export function emptyState(): PersistedState {
     draft: null,
     setupDone: false,
     legacyFormula: [],
+    reminder: defaultReminder(),
   }
 }
 
@@ -104,6 +119,7 @@ function migrateV1(data: Record<string, unknown>): PersistedState {
     draft,
     setupDone: Boolean(data.setupDone),
     legacyFormula: Array.isArray(data.formula) ? data.formula.map(str) : [],
+    reminder: defaultReminder(),
   }
 }
 
@@ -145,24 +161,64 @@ function readV2(data: Record<string, unknown>): PersistedState {
   }
   state.setupDone = Boolean(data.setupDone)
   if (Array.isArray(data.legacyFormula)) state.legacyFormula = data.legacyFormula.map(str)
+  state.reminder = reminderOf(data.reminder)
   return state
 }
 
-export function loadState(): PersistedState {
-  let data: Record<string, unknown> | null = null
+export function reminderOf(value: unknown): Reminder {
+  const raw = (value ?? {}) as Record<string, unknown>
+  const time = /^\d{2}:\d{2}$/.test(str(raw.time)) ? str(raw.time) : DEFAULT_REMINDER_TIME
+  return {
+    enabled: Boolean(raw.enabled),
+    time,
+    timeZone: str(raw.timeZone) || deviceTimeZone(),
+    ...(str(raw.lastSentLocalDate) ? { lastSentLocalDate: str(raw.lastSentLocalDate) } : {}),
+  }
+}
+
+/** Liest einen beliebigen gespeicherten Stand – lokal wie aus der Cloud. */
+export function parseState(data: unknown): PersistedState {
+  if (!data || typeof data !== 'object') return emptyState()
+  const record = data as Record<string, unknown>
+  if (typeof record.version === 'number' && record.version >= 2) return readV2(record)
+  return migrateV1(record)
+}
+
+/** Der alte, rein lokale Stand – Quelle für die einmalige Übernahme ins Konto. */
+export function loadLocalState(): PersistedState | null {
+  let data: unknown = null
   try {
     data = JSON.parse(localStorage.getItem(KEY) ?? 'null')
   } catch {
-    data = null
+    return null
   }
-  if (!data || typeof data !== 'object') return emptyState()
-  if (typeof data.version === 'number' && data.version >= 2) return readV2(data)
-  return migrateV1(data)
+  if (!data || typeof data !== 'object') return null
+  return parseState(data)
 }
 
-export function saveState(state: PersistedState): void {
+export function hasLocalState(): boolean {
+  const state = loadLocalState()
+  return Boolean(state && (state.entries.length || state.setupDone))
+}
+
+/**
+ * Spiegel des Kontostands im Browser. Damit steht die App auch ohne Verbindung
+ * sofort mit Inhalt da, statt auf die Cloud zu warten.
+ */
+const cacheKey = (uid: string) => `abendstratege-cache-${uid}`
+
+export function loadCache(uid: string): PersistedState | null {
   try {
-    localStorage.setItem(KEY, JSON.stringify(state))
+    const raw = localStorage.getItem(cacheKey(uid))
+    return raw ? parseState(JSON.parse(raw)) : null
+  } catch {
+    return null
+  }
+}
+
+export function saveCache(uid: string, state: PersistedState): void {
+  try {
+    localStorage.setItem(cacheKey(uid), JSON.stringify(state))
   } catch {
     // Privater Modus oder voller Speicher – die laufende Sitzung bleibt nutzbar.
   }

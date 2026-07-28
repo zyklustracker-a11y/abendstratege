@@ -50,6 +50,33 @@ export interface Entry {
 /** Die begonnene, noch nicht abgeschlossene Reflexion. */
 export type Draft = Entry
 
+/** Einstellungen der abendlichen Push-Erinnerung. */
+export interface Reminder {
+  enabled: boolean
+  /** 'HH:MM' in der Zeitzone des Nutzers. */
+  time: string
+  /** IANA-Zone, z. B. 'Europe/Berlin' – beim Aktivieren vom Gerät übernommen. */
+  timeZone: string
+  /**
+   * Lokales Datum der zuletzt verschickten Erinnerung. Der Versand-Job setzt
+   * den Wert, damit an einem Abend höchstens eine Benachrichtigung rausgeht.
+   */
+  lastSentLocalDate?: string
+}
+
+/**
+ * Ein angemeldetes Gerät mit seinem Push-Abo. Pro Nutzer beliebig viele –
+ * jedes Gerät meldet sich selbst an, ein neues Handy braucht keine erneute
+ * Einstellung.
+ */
+export interface PushDevice {
+  id: string
+  endpoint: string
+  keys: { p256dh: string; auth: string }
+  label: string
+  createdAt: number
+}
+
 export interface PersistedState {
   version: number
   areas: Area[]
@@ -58,9 +85,13 @@ export interface PersistedState {
   setupDone: boolean
   /** Die Erfolgsformel wurde entfernt; alte Einträge bleiben unangetastet liegen. */
   legacyFormula: string[]
+  reminder: Reminder
 }
 
-export type View = 'reflect' | 'morgen' | 'rueck' | 'ziele'
+export type View = 'reflect' | 'morgen' | 'rueck' | 'ziele' | 'einstellungen'
+
+/** Zustand der Cloud-Synchronisation – Grundlage für die dezente Statusanzeige. */
+export type SyncStatus = 'laden' | 'bereit' | 'speichert' | 'gespeichert' | 'offline' | 'fehler'
 
 /**
  * Ablauf eines Abends: Auftakt → Bereich wählen → Durchlauf → „noch ein Bereich?“
