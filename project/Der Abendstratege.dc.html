@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0f16;color:#e9e4d8;}
+a{color:#c9a35f;text-decoration:none;} a:hover{color:#ddbc80;}
+input::placeholder,textarea::placeholder{color:#535c6f;opacity:1;}
+select option{background:#141a26;color:#e9e4d8;}
+input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(.6) sepia(.3);opacity:.6;}
+textarea{resize:vertical;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#0b0f16;color:#e9e4d8;font-family:'Instrument Sans',sans-serif;display:flex;flex-direction:column;align-items:center;">
+
+<sc-if value="{{ isSetup }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Einrichtung" style="width:100%;max-width:560px;padding:64px 24px 80px;box-sizing:border-box;animation:fadeUp .5s ease;">
+  <div style="font-family:'Cormorant Garamond',serif;font-size:15px;letter-spacing:.28em;text-transform:uppercase;color:#c9a35f;margin-bottom:14px;">Der Abendstratege</div>
+  <h1 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:40px;line-height:1.15;margin:0 0 16px;">Bevor du beginnst:<br>deine fünf Leitziele.</h1>
+  <p style="color:#9aa2b1;font-size:15.5px;line-height:1.65;margin:0 0 40px;max-width:46ch;text-wrap:pretty;">Definiere je ein übergeordnetes Ziel in fünf Lebensbereichen. Sie sind das Fundament dieser App – jeder Erfolg wird später an ihnen gemessen. Du kannst sie jederzeit anpassen.</p>
+  <div style="display:flex;flex-direction:column;gap:26px;">
+    <sc-for list="{{ setupFields }}" as="f" hint-placeholder-count="5">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#c9a35f;font-weight:600;">{{ f.label }}</div>
+        <textarea rows="2" value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.placeholder }}" style="background:#10161f;border:1px solid #232c3d;border-radius:10px;color:#e9e4d8;font-family:'Instrument Sans',sans-serif;font-size:15px;line-height:1.5;padding:12px 14px;outline:none;" style-focus="border:1px solid #c9a35f;background:#10161f;"></textarea>
+      </div>
+    </sc-for>
+  </div>
+  <button disabled="{{ setupDisabled }}" onClick="{{ finishSetup }}" style="margin-top:40px;width:100%;background:#c9a35f;color:#14100a;border:none;border-radius:10px;padding:15px 20px;font-family:'Instrument Sans',sans-serif;font-size:15.5px;font-weight:600;letter-spacing:.02em;cursor:pointer;opacity:{{ setupOpacity }};transition:opacity .3s;">Meine Ziele festhalten</button>
+  <p style="text-align:center;color:#6b7383;font-size:13px;margin-top:14px;">Alle fünf Bereiche brauchen ein Ziel.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+<div style="width:100%;max-width:660px;padding:0 22px 90px;box-sizing:border-box;">
+
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding:30px 0 0;gap:12px;flex-wrap:wrap;">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;letter-spacing:.01em;">Der Abendstratege</div>
+    <sc-if value="{{ streakVisible }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:13px;color:#c9a35f;letter-spacing:.06em;display:flex;align-items:center;gap:7px;"><span style="font-size:8px;">◆</span>{{ streakLabel }}</div>
+    </sc-if>
+  </div>
+
+  <div style="display:flex;gap:4px;margin:22px 0 36px;border-bottom:1px solid #1c2434;flex-wrap:wrap;">
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+      <button onClick="{{ n.onClick }}" style="background:none;border:none;border-bottom:2px solid {{ n.bb }};color:{{ n.color }};font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:500;letter-spacing:.03em;padding:10px 12px;cursor:pointer;margin-bottom:-1px;transition:color .25s;">{{ n.label }}</button>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ isReflect }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Reflexion">
+
+    <sc-if value="{{ stageIntro }}" hint-placeholder-val="{{ true }}">
+    <div style="animation:fadeUp .45s ease;">
+      <div style="font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:#7e8698;margin-bottom:14px;">{{ todayLong }}</div>
+      <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:38px;line-height:1.2;margin:0 0 16px;">Guten Abend.</h2>
+      <p style="color:#9aa2b1;font-size:15.5px;line-height:1.7;margin:0 0 8px;max-width:48ch;text-wrap:pretty;">Was war heute dein größter Erfolg? Nimm dir gerne bis zu 30 Minuten Zeit – hier drängt nichts.</p>
+      <sc-if value="{{ hasRecap }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:28px;background:#10161f;border:1px solid #232c3d;border-radius:12px;padding:18px 20px;">
+          <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#c9a35f;font-weight:600;margin-bottom:8px;">Der Kreis schließt sich</div>
+          <div style="font-size:15px;line-height:1.6;color:#d8d3c6;">{{ recapText }}</div>
+          <div style="font-size:13.5px;color:#7e8698;margin-top:6px;font-style:italic;">Habe ich auf gestern aufgebaut?</div>
+        </div>
+      </sc-if>
+      <button onClick="{{ startReflection }}" style="margin-top:34px;background:#c9a35f;color:#14100a;border:none;border-radius:10px;padding:15px 30px;font-family:'Instrument Sans',sans-serif;font-size:15.5px;font-weight:600;cursor:pointer;">{{ startLabel }}</button>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ stageSteps }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;">
+        <div style="font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:#7e8698;">{{ stepLabel }}</div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <sc-for list="{{ dots }}" as="d" hint-placeholder-count="6">
+            <div style="height:5px;border-radius:3px;transition:all .35s;width:{{ d.w }};background:{{ d.b }};"></div>
+          </sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{ isStepA }}" hint-placeholder-val="{{ true }}">
+      <div style="animation:fadeUp .4s ease;">
+        <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:32px;line-height:1.25;margin:0 0 10px;">Dein größter Erfolg heute</h2>
+        <p style="color:#9aa2b1;font-size:15px;line-height:1.6;margin:0 0 24px;">Ein Satz genügt. Konkret, nicht bescheiden.</p>
+        <textarea rows="3" value="{{ successVal }}" onChange="{{ onSuccess }}" placeholder="Mein größter Erfolg heute war …" style="width:100%;box-sizing:border-box;background:#10161f;border:1px solid #232c3d;border-radius:10px;color:#e9e4d8;font-family:'Instrument Sans',sans-serif;font-size:16px;line-height:1.55;padding:14px 16px;outline:none;" style-focus="border:1px solid #c9a35f;background:#10161f;"></textarea>
+        <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#7e8698;font-weight:600;margin:26px 0 12px;">Lebensbereich</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <sc-for list="{{ areaChips }}" as="c" hint-placeholder-count="5">
+            <button onClick="{{ c.onClick }}" style="background:{{ c.bg }};border:1px solid {{ c.border }};color:{{ c.color }};border-radius:999px;padding:9px 18px;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all .25s;">{{ c.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isStepB }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeUp .4s ease;">
+        <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:32px;line-height:1.25;margin:0 0 10px;">Die fünf Ebenen</h2>
+        <p style="color:#9aa2b1;font-size:15px;line-height:1.6;margin:0 0 28px;max-width:48ch;text-wrap:pretty;">Bohre tiefer. Jede Ebene führt dich näher an den Kern deines Erfolgs.</p>
+        <div style="display:flex;flex-direction:column;gap:20px;">
+          <sc-for list="{{ levels }}" as="lv" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column;gap:7px;">
+              <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#c9a35f;font-weight:600;">Ebene {{ lv.n }}</div>
+              <textarea rows="2" value="{{ lv.value }}" onChange="{{ lv.onChange }}" placeholder="{{ lv.q }}" style="background:#10161f;border:1px solid #232c3d;border-radius:10px;color:#e9e4d8;font-family:'Instrument Sans',sans-serif;font-size:15px;line-height:1.55;padding:12px 14px;outline:none;" style-focus="border:1px solid #c9a35f;background:#10161f;"></textarea>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isStepC }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeUp .4s ease;">
+        <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:32px;line-height:1.25;margin:0 0 24px;">Warum ist es ein Erfolg?</h2>
+        <div style="background:#10161f;border:1px solid #232c3d;border-left:1px solid #232c3d;border-radius:12px;padding:20px 22px;margin-bottom:26px;">
+          <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#c9a35f;font-weight:600;margin-bottom:10px;">{{ draftAreaLabel }} · Dein Leitziel</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:21px;line-height:1.45;color:#e9e4d8;">{{ draftGoal }}</div>
+        </div>
+        <p style="color:#9aa2b1;font-size:15px;line-height:1.6;margin:0 0 12px;">Warum bringt dich dieser Erfolg diesem Ziel näher?</p>
+        <textarea rows="4" value="{{ whyVal }}" onChange="{{ onWhy }}" placeholder="Dieser Erfolg zahlt auf mein Ziel ein, weil …" style="width:100%;box-sizing:border-box;background:#10161f;border:1px solid #232c3d;border-radius:10px;color:#e9e4d8;font-family:'Instrument Sans',sans-serif;font-size:15px;line-height:1.55;padding:14px 16px;outline:none;" style-focus="border:1px solid #c9a35f;background:#10161f;"></textarea>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isStepD }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeUp .4s ease;">
+        <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:32px;line-height:1.25;margin:0 0 10px;">Ausweiten</h2>
+        <p style="color:#9aa2b1;font-size:15px;line-height:1.6;margin:0 0 24px;max-width:48ch;">Wie kannst du diesen Erfolg ausweiten oder wiederholen? Bleib pragmatisch – ein bis zwei Sätze.</p>
+        <textarea rows="2" value="{{ expandVal }}" onChange="{{ onExpand }}" placeholder="Kurz und konkret." style="width:100%;box-sizing:border-box;background:#10161f;border:1px solid #232c3d;border-radius:10px;color:#e9e4d8;font-family:'Instrument Sans',sans-serif;font-size:15px;line-height:1.55;padding:14px 16px;outline:none;" style-focus="border:1px solid #c9a35f;background:#10161f;"></textarea>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isStepE }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeUp .4s ease;">
+        <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:32px;line-height:1.25;margin:0 0 10px;">Next Steps</h2>
+        <p style="color:#9aa2b1;font-size:15px;line-height:1.6;margin:0 0 24px;">Welche konkreten nächsten Schritte ergeben sich daraus?</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ nextSteps }}" as="ns" hint-placeholder-count="2">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="text" value="{{ ns.value }}" onChange="{{ ns.onChange }}" placeholder="Nächster Schritt …" style="flex:1;background:#10161f;border:1px solid #232c3d;border-radius:10px;color:#e9e4d8;font-family:'Instrument Sans',sans-serif;font-size:15px;padding:12px 14px;outline:none;" style-focus="border:1px solid #c9a35f;background:#10161f;">
+              <button onClick="{{ ns.remove }}" title="Entfernen" style="background:none;border:1px solid #232c3d;color:#7e8698;border-radius:10px;width:42px;height:42px;font-size:18px;cursor:pointer;flex-shrink:0;" style-hover="color:#e9e4d8;border:1px solid #3a465e;background:none;">×</button>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ addStep }}" style="margin-top:14px;background:none;border:none;color:#c9a35f;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;padding:6px 0;">+ Schritt hinzufügen</button>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isStepF }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeUp .4s ease;">
+        <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:32px;line-height:1.25;margin:0 0 10px;">Die fünf Hiebe für morgen</h2>
+        <p style="color:#9aa2b1;font-size:15px;line-height:1.6;margin:0 0 26px;max-width:50ch;text-wrap:pretty;">Fünf konkrete Handlungen für den morgigen Tag. Das ist das Ergebnis deines Abends – Zeitpunkt optional.</p>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <sc-for list="{{ hiebe }}" as="h" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column;gap:8px;background:#10161f;border:1px solid #232c3d;border-radius:12px;padding:14px;">
+              <div style="display:flex;gap:10px;align-items:center;">
+                <div style="font-family:'Cormorant Garamond',serif;font-size:19px;color:#c9a35f;width:20px;text-align:center;flex-shrink:0;">{{ h.n }}</div>
+                <input type="text" value="{{ h.text }}" onChange="{{ h.onText }}" placeholder="Konkrete Handlung …" style="flex:1;background:none;border:none;border-bottom:1px solid #232c3d;color:#e9e4d8;font-family:'Instrument Sans',sans-serif;font-size:15px;padding:6px 2px;outline:none;" style-focus="border-bottom:1px solid #c9a35f;">
+              </div>
+              <div style="display:flex;gap:8px;margin-left:30px;">
+                <select value="{{ h.slot }}" onChange="{{ h.onSlot }}" style="background:#0b0f16;border:1px solid #232c3d;border-radius:8px;color:#9aa2b1;font-family:'Instrument Sans',sans-serif;font-size:13px;padding:7px 8px;outline:none;">
+                  <option value="">Tagesabschnitt</option>
+                  <option value="Morgens">Morgens</option>
+                  <option value="Mittags">Mittags</option>
+                  <option value="Abends">Abends</option>
+                </select>
+                <input type="time" value="{{ h.time }}" onChange="{{ h.onTime }}" style="background:#0b0f16;border:1px solid #232c3d;border-radius:8px;color:#9aa2b1;font-family:'Instrument Sans',sans-serif;font-size:13px;padding:6px 8px;outline:none;">
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isExtras }}" hint-placeholder-val="{{ false }}">
+      <div style="animation:fadeUp .4s ease;">
+        <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:32px;line-height:1.25;margin:0 0 10px;">Weitere Erfolge</h2>
+        <p style="color:#9aa2b1;font-size:15px;line-height:1.6;margin:0 0 24px;max-width:48ch;">Optional: Was ist dir heute sonst noch gelungen? In Kurzform, ohne Vertiefung.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ extras }}" as="ex" hint-placeholder-count="1">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input type="text" value="{{ ex.text }}" onChange="{{ ex.onText }}" placeholder="Weiterer Erfolg …" style="flex:1;min-width:180px;background:#10161f;border:1px solid #232c3d;border-radius:10px;color:#e9e4d8;font-family:'Instrument Sans',sans-serif;font-size:15px;padding:12px 14px;outline:none;" style-focus="border:1px solid #c9a35f;background:#10161f;">
+              <select value="{{ ex.area }}" onChange="{{ ex.onArea }}" style="background:#10161f;border:1px solid #232c3d;border-radius:10px;color:#9aa2b1;font-family:'Instrument Sans',sans-serif;font-size:13.5px;padding:12px 8px;outline:none;">
+                <option value="">Bereich</option>
+                <option value="sport">Sportlich</option>
+                <option value="business">Business</option>
+                <option value="mindset">Mindset</option>
+                <option value="religion">Religiös</option>
+                <option value="familie">Familiär</option>
+              </select>
+              <button onClick="{{ ex.remove }}" title="Entfernen" style="background:none;border:1px solid #232c3d;color:#7e8698;border-radius:10px;width:42px;height:42px;font-size:18px;cursor:pointer;flex-shrink:0;" style-hover="color:#e9e4d8;border:1px solid #3a465e;background:none;">×</button>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ addExtra }}" style="margin-top:14px;background:none;border:none;color:#c9a35f;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;padding:6px 0;">+ Erfolg hinzufügen</button>
+      </div>
+      </sc-if>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:40px;gap:12px;">
+        <button onClick="{{ goBack }}" style="background:none;border:1px solid #232c3d;color:#9aa2b1;border-radius:10px;padding:13px 22px;font-family:'Instrument Sans',sans-serif;font-size:14.5px;font-weight:500;cursor:pointer;" style-hover="color:#e9e4d8;border:1px solid #3a465e;background:none;">Zurück</button>
+        <sc-if value="{{ notExtras }}" hint-placeholder-val="{{ true }}">
+          <button disabled="{{ nextDisabled }}" onClick="{{ goNext }}" style="background:#c9a35f;color:#14100a;border:none;border-radius:10px;padding:13px 28px;font-family:'Instrument Sans',sans-serif;font-size:14.5px;font-weight:600;cursor:pointer;opacity:{{ nextOpacity }};transition:opacity .3s;">Weiter</button>
+        </sc-if>
+        <sc-if value="{{ isExtras }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ finish }}" style="background:#c9a35f;color:#14100a;border:none;border-radius:10px;padding:13px 28px;font-family:'Instrument Sans',sans-serif;font-size:14.5px;font-weight:600;cursor:pointer;">Reflexion abschließen</button>
+        </sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ stageDone }}" hint-placeholder-val="{{ false }}">
+    <div style="animation:fadeUp .5s ease;text-align:center;padding-top:24px;">
+      <div style="font-size:13px;color:#c9a35f;letter-spacing:.3em;">◆</div>
+      <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:36px;margin:18px 0 10px;">Festgehalten.</h2>
+      <p style="color:#9aa2b1;font-size:15px;line-height:1.6;margin:0 0 34px;">{{ doneStreakLine }}</p>
+      <div style="text-align:left;background:#10161f;border:1px solid #232c3d;border-radius:12px;padding:22px 24px;max-width:460px;margin:0 auto;">
+        <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#c9a35f;font-weight:600;margin-bottom:14px;">Deine Hiebe für morgen</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ doneHiebe }}" as="dh" hint-placeholder-count="5">
+            <div style="display:flex;gap:12px;align-items:baseline;">
+              <div style="font-family:'Cormorant Garamond',serif;font-size:17px;color:#c9a35f;width:14px;flex-shrink:0;">{{ dh.n }}</div>
+              <div style="font-size:14.5px;line-height:1.5;color:#d8d3c6;">{{ dh.text }} <span style="color:#6b7383;font-size:13px;">{{ dh.meta }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:32px;flex-wrap:wrap;">
+        <button onClick="{{ toMorgen }}" style="background:#c9a35f;color:#14100a;border:none;border-radius:10px;padding:13px 26px;font-family:'Instrument Sans',sans-serif;font-size:14.5px;font-weight:600;cursor:pointer;">Zum Morgen-Blick</button>
+        <button onClick="{{ startReflection }}" style="background:none;border:1px solid #232c3d;color:#9aa2b1;border-radius:10px;padding:13px 22px;font-family:'Instrument Sans',sans-serif;font-size:14.5px;font-weight:500;cursor:pointer;" style-hover="color:#e9e4d8;border:1px solid #3a465e;background:none;">Bearbeiten</button>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isMorgen }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Morgen-Blick" style="animation:fadeUp .45s ease;">
+    <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:34px;margin:0 0 8px;">Morgen-Blick</h2>
+    <sc-if value="{{ hasMorgen }}" hint-placeholder-val="{{ false }}">
+      <p style="color:#9aa2b1;font-size:14.5px;margin:0 0 30px;">Deine fünf Hiebe aus der Reflexion vom {{ morgenDateLabel }}.</p>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <sc-for list="{{ morgenHiebe }}" as="m" hint-placeholder-count="5">
+          <button onClick="{{ m.toggle }}" style="display:flex;gap:16px;align-items:center;text-align:left;background:#10161f;border:1px solid #232c3d;border-radius:12px;padding:16px 18px;cursor:pointer;font-family:'Instrument Sans',sans-serif;transition:border-color .25s;" style-hover="border:1px solid #3a465e;background:#10161f;">
+            <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;border:1.5px solid {{ m.circleBorder }};background:{{ m.circleBg }};display:flex;align-items:center;justify-content:center;color:#14100a;font-size:12px;font-weight:700;transition:all .25s;">{{ m.mark }}</div>
+            <div style="flex:1;">
+              <div style="font-size:15.5px;line-height:1.5;color:{{ m.color }};text-decoration:{{ m.deco }};">{{ m.text }}</div>
+              <sc-if value="{{ m.hasMeta }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:13px;color:#6b7383;margin-top:3px;">{{ m.meta }}</div>
+              </sc-if>
+            </div>
+          </button>
+        </sc-for>
+      </div>
+      <p style="color:#7e8698;font-size:13.5px;margin-top:22px;letter-spacing:.04em;">{{ morgenProgress }}</p>
+    </sc-if>
+    <sc-if value="{{ noMorgen }}" hint-placeholder-val="{{ true }}">
+      <div style="border:1px dashed #232c3d;border-radius:14px;padding:56px 30px;text-align:center;margin-top:24px;">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:#d8d3c6;margin-bottom:10px;">Noch keine Hiebe formuliert.</div>
+        <p style="color:#7e8698;font-size:14.5px;line-height:1.6;margin:0 0 24px;">Deine erste Abendreflexion legt die fünf Hiebe für den nächsten Tag fest.</p>
+        <button onClick="{{ navReflect }}" style="background:none;border:1px solid #c9a35f;color:#c9a35f;border-radius:10px;padding:12px 24px;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;">Heute Abend reflektieren</button>
+      </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isRueck }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Rückblick" style="animation:fadeUp .45s ease;">
+    <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:34px;margin:0 0 30px;">Rückblick &amp; Muster</h2>
+
+    <sc-if value="{{ hasEntries }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;">
+        <div style="flex:1.4;min-width:250px;background:#10161f;border:1px solid #232c3d;border-radius:12px;padding:20px 22px;">
+          <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#7e8698;font-weight:600;margin-bottom:16px;">Erfolge nach Lebensbereich</div>
+          <div style="display:flex;flex-direction:column;gap:11px;">
+            <sc-for list="{{ areaStats }}" as="a" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:74px;font-size:13px;color:#9aa2b1;flex-shrink:0;">{{ a.label }}</div>
+                <div style="flex:1;height:6px;background:#1a2130;border-radius:3px;overflow:hidden;"><div style="height:100%;background:#c9a35f;border-radius:3px;width:{{ a.w }};transition:width .5s;"></div></div>
+                <div style="width:20px;text-align:right;font-size:13px;color:#d8d3c6;">{{ a.count }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:14px;">
+          <div style="background:#10161f;border:1px solid #232c3d;border-radius:12px;padding:20px 22px;flex:1;">
+            <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#7e8698;font-weight:600;margin-bottom:10px;">Umsetzungsquote</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:38px;color:#c9a35f;line-height:1;">{{ quotaPct }}</div>
+            <div style="font-size:13px;color:#7e8698;margin-top:8px;line-height:1.5;">{{ quotaSub }}</div>
+          </div>
+          <div style="background:#10161f;border:1px solid #232c3d;border-radius:12px;padding:20px 22px;">
+            <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#7e8698;font-weight:600;margin-bottom:10px;">Reflexionen</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:38px;color:#e9e4d8;line-height:1;">{{ entryCount }}</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="background:#10161f;border:1px solid #232c3d;border-radius:12px;padding:22px;margin-bottom:36px;">
+      <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#c9a35f;font-weight:600;margin-bottom:6px;">Meine Erfolgsformel</div>
+      <p style="color:#7e8698;font-size:13.5px;line-height:1.6;margin:0 0 16px;">Deine erkannten Erfolgsfaktoren – von dir gepflegt, über die Zeit gewachsen.</p>
+      <sc-if value="{{ impulseVisible }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #3a3323;background:#171509;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;">
+          <div style="font-size:14px;line-height:1.6;color:#d8c9a4;font-style:italic;">Was hat dich diese Woche wirklich vorangebracht? Geh an den Ursprung und benenne den Faktor.</div>
+          <button onClick="{{ dismissImpulse }}" title="Für diese Woche ausblenden" style="background:none;border:none;color:#8a7c55;font-size:16px;cursor:pointer;padding:0;flex-shrink:0;">×</button>
+        </div>
+      </sc-if>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+        <sc-for list="{{ formulaItems }}" as="fi" hint-placeholder-count="2">
+          <div style="display:flex;gap:12px;align-items:baseline;justify-content:space-between;border-bottom:1px solid #1a2130;padding-bottom:8px;">
+            <div style="display:flex;gap:10px;align-items:baseline;"><span style="color:#c9a35f;font-size:9px;">◆</span><span style="font-size:14.5px;line-height:1.5;color:#d8d3c6;">{{ fi.text }}</span></div>
+            <button onClick="{{ fi.remove }}" style="background:none;border:none;color:#535c6f;font-size:14px;cursor:pointer;padding:0;" style-hover="color:#9aa2b1;">×</button>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" value="{{ formulaInput }}" onChange="{{ onFormulaInput }}" onKeyDown="{{ onFormulaKey }}" placeholder="Neuen Erfolgsfaktor benennen …" style="flex:1;background:#0b0f16;border:1px solid #232c3d;border-radius:10px;color:#e9e4d8;font-family:'Instrument Sans',sans-serif;font-size:14px;padding:11px 13px;outline:none;" style-focus="border:1px solid #c9a35f;background:#0b0f16;">
+        <button onClick="{{ addFormula }}" style="background:none;border:1px solid #c9a35f;color:#c9a35f;border-radius:10px;padding:0 18px;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;">Aufnehmen</button>
+      </div>
+    </div>
+
+    <sc-if value="{{ hasEntries }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
+        <sc-for list="{{ filterChips }}" as="fc" hint-placeholder-count="6">
+          <button onClick="{{ fc.onClick }}" style="background:{{ fc.bg }};border:1px solid {{ fc.border }};color:{{ fc.color }};border-radius:999px;padding:7px 15px;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .25s;">{{ fc.label }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <sc-for list="{{ entriesList }}" as="e" hint-placeholder-count="3">
+          <div style="background:#10161f;border:1px solid #232c3d;border-radius:12px;overflow:hidden;">
+            <button onClick="{{ e.toggle }}" style="width:100%;display:flex;gap:14px;align-items:baseline;text-align:left;background:none;border:none;padding:17px 20px;cursor:pointer;font-family:'Instrument Sans',sans-serif;">
+              <div style="flex:1;">
+                <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:5px;">
+                  <span style="font-size:12.5px;color:#7e8698;letter-spacing:.06em;">{{ e.dateLabel }}</span>
+                  <span style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#c9a35f;border:1px solid #3a3323;border-radius:999px;padding:2px 9px;">{{ e.areaLabel }}</span>
+                </div>
+                <div style="font-family:'Cormorant Garamond',serif;font-size:19px;line-height:1.4;color:#e9e4d8;">{{ e.success }}</div>
+              </div>
+              <div style="color:#7e8698;font-size:17px;flex-shrink:0;">{{ e.chev }}</div>
+            </button>
+            <sc-if value="{{ e.expanded }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:4px 20px 22px;border-top:1px solid #1a2130;">
+                <sc-if value="{{ e.hasLevels }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:#7e8698;font-weight:600;margin:18px 0 10px;">Die fünf Ebenen</div>
+                  <div style="display:flex;flex-direction:column;gap:10px;">
+                    <sc-for list="{{ e.levelsQA }}" as="lq" hint-placeholder-count="3">
+                      <div><div style="font-size:12.5px;color:#7e8698;font-style:italic;margin-bottom:2px;">{{ lq.q }}</div><div style="font-size:14.5px;line-height:1.55;color:#d8d3c6;">{{ lq.a }}</div></div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ e.hasWhy }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:#7e8698;font-weight:600;margin:18px 0 6px;">Warum es ein Erfolg ist</div>
+                  <div style="font-size:14.5px;line-height:1.55;color:#d8d3c6;">{{ e.why }}</div>
+                </sc-if>
+                <sc-if value="{{ e.hasExpand }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:#7e8698;font-weight:600;margin:18px 0 6px;">Ausweiten</div>
+                  <div style="font-size:14.5px;line-height:1.55;color:#d8d3c6;">{{ e.expandTxt }}</div>
+                </sc-if>
+                <sc-if value="{{ e.hasNext }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:#7e8698;font-weight:600;margin:18px 0 8px;">Next Steps</div>
+                  <div style="display:flex;flex-direction:column;gap:5px;">
+                    <sc-for list="{{ e.nextStepsList }}" as="nsl" hint-placeholder-count="2">
+                      <div style="font-size:14.5px;line-height:1.5;color:#d8d3c6;display:flex;gap:9px;"><span style="color:#c9a35f;">–</span>{{ nsl.t }}</div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ e.hasHiebe }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:#7e8698;font-weight:600;margin:18px 0 8px;">Die fünf Hiebe</div>
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    <sc-for list="{{ e.hiebeList }}" as="hl" hint-placeholder-count="5">
+                      <div style="font-size:14.5px;line-height:1.5;display:flex;gap:9px;align-items:baseline;"><span style="color:{{ hl.markColor }};font-size:12px;">{{ hl.mark }}</span><span style="color:#d8d3c6;">{{ hl.text }} <span style="color:#6b7383;font-size:13px;">{{ hl.meta }}</span></span></div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ e.hasExtras }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:#7e8698;font-weight:600;margin:18px 0 8px;">Weitere Erfolge</div>
+                  <div style="display:flex;flex-direction:column;gap:5px;">
+                    <sc-for list="{{ e.extrasList }}" as="exl" hint-placeholder-count="2">
+                      <div style="font-size:14.5px;line-height:1.5;color:#d8d3c6;display:flex;gap:9px;align-items:baseline;"><span style="color:#c9a35f;font-size:9px;">◆</span><span>{{ exl.text }} <span style="color:#6b7383;font-size:13px;">{{ exl.area }}</span></span></div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ noEntries }}" hint-placeholder-val="{{ true }}">
+      <div style="border:1px dashed #232c3d;border-radius:14px;padding:56px 30px;text-align:center;">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:#d8d3c6;margin-bottom:10px;">Dein Archiv ist noch leer.</div>
+        <p style="color:#7e8698;font-size:14.5px;line-height:1.6;margin:0 0 24px;max-width:42ch;margin-left:auto;margin-right:auto;">Mit jeder Abendreflexion wächst hier dein Rückblick – und mit ihm die Muster deiner Erfolge.</p>
+        <button onClick="{{ navReflect }}" style="background:none;border:1px solid #c9a35f;color:#c9a35f;border-radius:10px;padding:12px 24px;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;">Erste Reflexion beginnen</button>
+      </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isZiele }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Meine Ziele" style="animation:fadeUp .45s ease;">
+    <h2 style="font-family:'Cormorant Garamond',serif;font-weight:500;font-size:34px;margin:0 0 8px;">Meine Ziele</h2>
+    <p style="color:#9aa2b1;font-size:15px;line-height:1.65;margin:0 0 34px;max-width:48ch;text-wrap:pretty;">Deine fünf übergeordneten Leitziele. Jeder Erfolg wird an ihnen gemessen – halte sie scharf.</p>
+    <div style="display:flex;flex-direction:column;gap:24px;">
+      <sc-for list="{{ zieleFields }}" as="z" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#c9a35f;font-weight:600;">{{ z.label }}</div>
+          <textarea rows="2" value="{{ z.value }}" onChange="{{ z.onChange }}" placeholder="{{ z.placeholder }}" style="background:#10161f;border:1px solid #232c3d;border-radius:10px;color:#e9e4d8;font-family:'Instrument Sans',sans-serif;font-size:15px;line-height:1.5;padding:12px 14px;outline:none;" style-focus="border:1px solid #c9a35f;background:#10161f;"></textarea>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;margin-top:32px;">
+      <button onClick="{{ saveZiele }}" style="background:#c9a35f;color:#14100a;border:none;border-radius:10px;padding:13px 28px;font-family:'Instrument Sans',sans-serif;font-size:14.5px;font-weight:600;cursor:pointer;">Ziele speichern</button>
+      <sc-if value="{{ zieleSavedVisible }}" hint-placeholder-val="{{ false }}">
+        <span style="color:#c9a35f;font-size:13.5px;">Gespeichert.</span>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;demoDaten&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Vorschau&quot;,&quot;description&quot;:&quot;Zeigt Beispieldaten (nur solange keine eigenen Einträge existieren)&quot;},&quot;startAnsicht&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;reflexion&quot;,&quot;morgen&quot;,&quot;rueckblick&quot;,&quot;ziele&quot;],&quot;default&quot;:&quot;reflexion&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Vorschau&quot;}}">
+class Component extends DCLogic {
+  state = {
+    loaded: false,
+    goals: { sport: '', business: '', mindset: '', religion: '', familie: '' },
+    setupDone: false, entries: [], formula: [], impulseWeek: '',
+    view: 'reflect', stage: 'intro', step: 0, draft: null,
+    expandedId: null, filter: 'alle', formulaInput: '',
+    zieleDraft: null, zieleSaved: false,
+    setupDraft: { sport: '', business: '', mindset: '', religion: '', familie: '' }
+  };
+  AREAS = [['sport','Sportlich'],['business','Business'],['mindset','Mindset'],['religion','Religiös'],['familie','Familiär']];
+  LEVELQ = ['Was genau lief heute gut?','Was hast du konkret getan?','Was hat diesen Erfolg ermöglicht?','Was sagt das über deine Fähigkeiten und deine Entwicklung aus?','Was bedeutet das im großen Bild für dich?'];
+  KEY = 'abendstratege-v1';
+  GOLD = '#c9a35f';
+  areaLabel(k){ const a = this.AREAS.find(x=>x[0]===k); return a ? a[1] : ''; }
+  iso(d){ d = d || new Date(); const p = n => String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  fmtLong(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+  fmtShort(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'long',year:'numeric'}); }
+  weekKey(){ const d = new Date(); const o = new Date(d.getFullYear(),0,1); const w = Math.ceil((((d-o)/86400000)+o.getDay()+1)/7); return d.getFullYear()+'-'+w; }
+  emptyDraft(){ return { _date: this.iso(), area:'', success:'', levels:['','','','',''], why:'', expand:'', nextSteps:[''], hiebe:[0,1,2,3,4].map(()=>({text:'',slot:'',time:'',done:false})), extras:[] }; }
+  componentDidMount(){
+    let data = {}; try { data = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch(e) {}
+    const patch = { loaded: true };
+    ['goals','setupDone','entries','formula','impulseWeek','draft'].forEach(k => { if (data[k] !== undefined && data[k] !== null) patch[k] = data[k]; });
+    const va = { reflexion:'reflect', morgen:'morgen', rueckblick:'rueck', ziele:'ziele' }[this.props.startAnsicht];
+    if (va) patch.view = va;
+    patch.zieleDraft = { ...(patch.goals || this.state.goals) };
+    this.setState(patch);
+  }
+  save(){ const s = this.state; try { localStorage.setItem(this.KEY, JSON.stringify({ goals: s.goals, setupDone: s.setupDone, entries: s.entries, formula: s.formula, impulseWeek: s.impulseWeek, draft: s.draft })); } catch(e) {} }
+  st(patch){ this.setState(patch, () => this.save()); }
+  upd(fn){ this.setState(s => { const d = JSON.parse(JSON.stringify(s.draft || this.emptyDraft())); fn(d); return { draft: d }; }, () => this.save()); }
+  streak(entries){ const set = new Set(entries.map(e=>e.date)); const d = new Date(); if (!set.has(this.iso(d))) d.setDate(d.getDate()-1); let n = 0; while (set.has(this.iso(d))) { n++; d.setDate(d.getDate()-1); } return n; }
+  demoEntries(){
+    if (this._demo) return this._demo;
+    const mk = (off, area, success, levels, why, expand, steps, hiebe, extras) => {
+      const d = new Date(); d.setDate(d.getDate()-off);
+      return { date: this.iso(d), area, success, levels, why, expand, nextSteps: steps,
+        hiebe: hiebe.map(h => ({ text: h[0], slot: h[1]||'', time: h[2]||'', done: !!h[3] })), extras: extras||[] };
+    };
+    this._demo = [
+      mk(0,'business','Das Angebot für den Großkunden fertiggestellt und abgeschickt.',['Das Angebot ist raus – zwei Tage vor der Frist.','Morgens zwei Stunden fokussiert daran gearbeitet, Handy weggelegt.','Die klare Priorisierung am Vorabend.','Ich kann große Aufgaben in ruhige Einzelschritte zerlegen.','Ich baue mir Schritt für Schritt unternehmerische Souveränität auf.'],'Es bringt mich meinem Umsatzziel direkt näher – ein Abschluss dieser Größe wäre ein Meilenstein.','Jede Woche einen festen Angebots-Vormittag einplanen.',['Nachfassen am Donnerstag','Referenzen-Dokument aktualisieren'],[['Follow-up-Mail an den Kunden','Morgens','',false],['30 Minuten Lauftraining','','06:30',false],['Abendgebet in Ruhe','Abends','',false],['Mit den Kindern Abendessen ohne Handy','Abends','',false],['Buchkapitel über Verhandlung lesen','Mittags','',false]],[{text:'Trotz vollem Tag das Training nicht ausfallen lassen',area:'sport'}]),
+      mk(1,'sport','Zum ersten Mal 10 km ohne Pause gelaufen.',['Die 10 km waren durchgehend möglich – ohne Gehpause.','Tempo bewusst rausgenommen und auf die Atmung geachtet.','Die konsequenten kurzen Läufe der letzten Wochen.','Mein Körper belohnt Beständigkeit – ich kann mir vertrauen.','Disziplin in einem Bereich strahlt auf alle anderen aus.'],'Mein Ziel ist Ausdauer und Beständigkeit – heute war der Beweis, dass der Weg stimmt.','Die 10 km als festen Sonntagslauf etablieren.',['Laufplan für nächste Woche schreiben'],[['Dehnen und Regeneration','Morgens','',true],['Angebot final Korrektur lesen','Morgens','',true],['Anruf bei meinem Bruder','Abends','',true],['15 Minuten stilles Gebet','Morgens','',false],['Wochenplan mit meiner Frau besprechen','Abends','',true]],[]),
+      mk(2,'familie','Einen ganzen Nachmittag ungestört mit meiner Tochter verbracht.',['Drei Stunden nur für sie – ohne Termine, ohne Handy.','Bewusst den Nachmittag freigeblockt und alle Anfragen verschoben.','Die Entscheidung, Familienzeit wie einen Geschäftstermin zu behandeln.','Ich kann Prioritäten nicht nur setzen, sondern auch halten.','Präsenz ist das wertvollste Geschenk, das ich geben kann.'],'Mein familiäres Ziel ist echte Präsenz – heute habe ich sie gelebt statt geplant.','Jeden Mittwochnachmittag fest als Familienzeit blocken.',['Mittwoch im Kalender dauerhaft blocken'],[['Frühsport vor der Arbeit','','06:00',true],['Kundentermin vorbereiten','Mittags','',true],['Dankbarkeitsmoment vor dem Schlafen','Abends','',true],['Tochter von der Schule abholen','Mittags','',true],['Eine Seite im Journal schreiben','Abends','',true]],[{text:'Spontanes Kompliment eines Kollegen für meine Ruhe',area:'mindset'}]),
+      mk(4,'mindset','In einer hitzigen Diskussion ruhig geblieben und zugehört.',['Ich habe nicht impulsiv reagiert, sondern erst verstanden.','Dreimal tief durchgeatmet und eine Rückfrage gestellt.','Die Meditationspraxis der letzten Monate.','Ich bin nicht mehr Sklave meiner ersten Reaktion.','Innere Ruhe wird zu meinem Fundament, nicht zur Ausnahme.'],'Gelassenheit unter Druck ist genau das Mindset-Ziel, an dem ich arbeite.','Die Atem-Rückfrage-Technik bewusst im nächsten Konflikt einsetzen.',['Notiz zur Technik ins Journal übertragen'],[['10 Minuten Meditation','Morgens','',true],['Schwierige E-Mail in Ruhe beantworten','Mittags','',false],['Spaziergang ohne Podcast','Abends','',true],['Früh schlafen gehen','Abends','22:30',true],['Wasser statt Kaffee am Nachmittag','Mittags','',false]],[]),
+      mk(5,'religion','Den Tag mit 20 Minuten stillem Gebet begonnen.',['Der Morgen hatte eine Ruhe, die den ganzen Tag getragen hat.','Wecker 30 Minuten früher gestellt, Ecke im Wohnzimmer vorbereitet.','Der Entschluss vom Vorabend und das vorbereitete Umfeld.','Ich kann meinem inneren Leben denselben Ernst geben wie meiner Arbeit.','Meine Mitte liegt nicht im Erreichten, sondern im Getragensein.'],'Tägliche geistliche Praxis ist mein Ziel – heute war sie der Anker des Tages.','Die Gebetsecke dauerhaft eingerichtet lassen, Wecker bleibt vorgestellt.',['Geistliches Buch für die Woche auswählen'],[['20 Minuten Gebet','Morgens','',true],['Krafttraining','','17:00',true],['Pipeline im CRM aktualisieren','Mittags','',true],['Meiner Frau eine Freude machen','','',true],['Handy ab 21 Uhr weglegen','Abends','',false]],[])
+    ];
+    return this._demo;
+  }
+  startReflection = () => {
+    const t = this.iso();
+    const ex = this.state.entries.find(e => e.date === t);
+    let draft;
+    if (ex) { draft = JSON.parse(JSON.stringify(ex)); draft._date = t; if (!draft.nextSteps || !draft.nextSteps.length) draft.nextSteps = ['']; }
+    else if (this.state.draft && this.state.draft._date === t) draft = this.state.draft;
+    else draft = this.emptyDraft();
+    this.st({ draft, stage: 'steps', step: 0 });
+  };
+  finish = () => {
+    const d = this.state.draft; if (!d || !d.success.trim()) return;
+    const entry = { date: this.iso(), area: d.area, success: d.success.trim(), levels: d.levels, why: d.why, expand: d.expand,
+      nextSteps: d.nextSteps.filter(s => s.trim()), hiebe: d.hiebe, extras: d.extras.filter(x => x.text.trim()) };
+    this.setState(s => {
+      const entries = s.entries.filter(e => e.date !== entry.date).concat([entry]);
+      return { entries, stage: 'done', draft: null };
+    }, () => this.save());
+  };
+  toggleHieb(i){
+    this.setState(s => {
+      const entries = JSON.parse(JSON.stringify(s.entries));
+      if (!entries.length) return {};
+      entries.sort((a,b) => a.date < b.date ? -1 : 1);
+      const last = entries[entries.length-1];
+      if (last.hiebe[i]) last.hiebe[i].done = !last.hiebe[i].done;
+      return { entries };
+    }, () => this.save());
+  }
+  renderVals(){
+    const s = this.state;
+    const demo = !!this.props.demoDaten && s.entries.length === 0;
+    const entries = demo ? this.demoEntries() : s.entries;
+    const goals = demo && !this.setupFilled(s.goals) ? { sport:'Dreimal pro Woche trainieren – mit Ausdauer und Beständigkeit.', business:'Mein Geschäft auf 20 % Wachstum führen, ohne meine Werte zu opfern.', mindset:'In jeder Situation gelassen bleiben und aus Reflexion handeln.', religion:'Jeden Tag mit geistlicher Praxis beginnen und beschließen.', familie:'Echte, ungeteilte Präsenz für meine Frau und Kinder.' } : s.goals;
+    const setupDone = s.setupDone || demo;
+    const isSetup = s.loaded && !setupDone;
+    const gold = this.GOLD;
+    const today = this.iso();
+    const sorted = [...entries].sort((a,b) => a.date < b.date ? 1 : -1);
+    const streak = this.streak(entries);
+    const d = s.draft || this.emptyDraft();
+
+    // setup + ziele fields
+    const placeholders = { sport:'z. B. Dreimal pro Woche trainieren – konsequent, nicht perfekt.', business:'z. B. Mein Geschäft dieses Jahr um 20 % wachsen lassen.', mindset:'z. B. Gelassen bleiben und aus Reflexion statt Reflex handeln.', religion:'z. B. Jeden Tag mit geistlicher Praxis beginnen.', familie:'z. B. Ungeteilte Präsenz für meine Familie – jeden Tag.' };
+    const setupFields = this.AREAS.map(([k,l]) => ({ label: l, value: s.setupDraft[k], placeholder: placeholders[k],
+      onChange: e => this.setState({ setupDraft: { ...this.state.setupDraft, [k]: e.target.value } }) }));
+    const setupReady = this.AREAS.every(([k]) => s.setupDraft[k].trim());
+    const zieleFields = this.AREAS.map(([k,l]) => ({ label: l, value: (s.zieleDraft || goals)[k] || '', placeholder: placeholders[k],
+      onChange: e => this.setState({ zieleDraft: { ...(this.state.zieleDraft || this.state.goals), [k]: e.target.value }, zieleSaved: false }) }));
+
+    // nav
+    const navDefs = [['reflect','Reflexion'],['morgen','Morgen-Blick'],['rueck','Rückblick'],['ziele','Ziele']];
+    const navItems = navDefs.map(([v,l]) => ({ label: l, color: s.view === v ? '#e9e4d8' : '#7e8698', bb: s.view === v ? gold : 'transparent',
+      onClick: () => this.setState({ view: v, zieleSaved: false }) }));
+
+    // intro recap
+    const prev = sorted.find(e => e.date < today);
+    let hasRecap = false, recapText = '';
+    if (prev) {
+      const withText = prev.hiebe.filter(h => h.text.trim());
+      if (withText.length) { hasRecap = true; const done = withText.filter(h => h.done).length;
+        recapText = 'Von deinen ' + withText.length + ' Hieben vom ' + this.fmtShort(prev.date) + ' hast du ' + done + ' umgesetzt.'; }
+    }
+    const todayEntry = entries.find(e => e.date === today);
+
+    // wizard
+    const STEPS = 7;
+    const stepLabel = s.step < 6 ? 'Schritt ' + (s.step+1) + ' von 6' : 'Optional';
+    const dots = Array.from({length: STEPS}, (_, i) => ({ w: i === s.step ? '22px' : '10px', b: i === s.step ? gold : (i < s.step ? '#6d5c39' : '#232c3d') }));
+    const areaChips = this.AREAS.map(([k,l]) => ({ label: l, bg: d.area === k ? 'rgba(201,163,95,.14)' : 'transparent',
+      border: d.area === k ? gold : '#232c3d', color: d.area === k ? gold : '#9aa2b1',
+      onClick: () => this.upd(dr => { dr.area = k; }) }));
+    const levels = this.LEVELQ.map((q,i) => ({ n: i+1, q, value: d.levels[i], onChange: e => { const v = e.target.value; this.upd(dr => { dr.levels[i] = v; }); } }));
+    const nextSteps = d.nextSteps.map((v,i) => ({ value: v,
+      onChange: e => { const val = e.target.value; this.upd(dr => { dr.nextSteps[i] = val; }); },
+      remove: () => this.upd(dr => { dr.nextSteps.splice(i,1); if (!dr.nextSteps.length) dr.nextSteps = ['']; }) }));
+    const hiebe = d.hiebe.map((h,i) => ({ n: i+1, text: h.text, slot: h.slot, time: h.time,
+      onText: e => { const v = e.target.value; this.upd(dr => { dr.hiebe[i].text = v; }); },
+      onSlot: e => { const v = e.target.value; this.upd(dr => { dr.hiebe[i].slot = v; }); },
+      onTime: e => { const v = e.target.value; this.upd(dr => { dr.hiebe[i].time = v; }); } }));
+    const extras = d.extras.map((x,i) => ({ text: x.text, area: x.area,
+      onText: e => { const v = e.target.value; this.upd(dr => { dr.extras[i].text = v; }); },
+      onArea: e => { const v = e.target.value; this.upd(dr => { dr.extras[i].area = v; }); },
+      remove: () => this.upd(dr => { dr.extras.splice(i,1); }) }));
+    const canNext = s.step !== 0 || (d.success.trim() && d.area);
+    const meta = h => { const parts = []; if (h.time) parts.push(h.time + ' Uhr'); if (h.slot) parts.push(h.slot); return parts.join(' · '); };
+
+    // done screen
+    const lastEntry = sorted[0];
+    const doneHiebe = (todayEntry ? todayEntry.hiebe : []).filter(h => h.text.trim()).map((h,i) => ({ n: i+1, text: h.text, meta: meta(h) }));
+
+    // morgen
+    const morgenEntry = sorted[0];
+    const morgenHiebe = morgenEntry ? morgenEntry.hiebe.map((h,i) => ({ i, h })).filter(x => x.h.text.trim()).map(x => ({
+      text: x.h.text, meta: meta(x.h), hasMeta: !!meta(x.h),
+      mark: x.h.done ? '✓' : '', circleBg: x.h.done ? gold : 'transparent', circleBorder: x.h.done ? gold : '#3a465e',
+      color: x.h.done ? '#7e8698' : '#e9e4d8', deco: x.h.done ? 'line-through' : 'none',
+      toggle: () => { if (!demo) this.toggleHieb(x.i); } })) : [];
+    const mDone = morgenHiebe.filter(m => m.mark).length;
+    const morgenProgress = mDone + ' von ' + morgenHiebe.length + ' umgesetzt';
+
+    // rueckblick stats
+    const counts = {}; this.AREAS.forEach(([k]) => counts[k] = 0);
+    let hTotal = 0, hDone = 0;
+    entries.forEach(e => { if (e.area) counts[e.area]++; (e.extras||[]).forEach(x => { if (x.area) counts[x.area]++; });
+      e.hiebe.forEach(h => { if (h.text.trim()) { hTotal++; if (h.done) hDone++; } }); });
+    const maxCount = Math.max(1, ...Object.values(counts));
+    const areaStats = this.AREAS.map(([k,l]) => ({ label: l, count: counts[k], w: Math.round(counts[k]/maxCount*100) + '%' }));
+    const quotaPct = hTotal ? Math.round(hDone/hTotal*100) + ' %' : '–';
+    const filterChips = [['alle','Alle'], ...this.AREAS].map(([k,l]) => ({ label: l,
+      bg: s.filter === k ? 'rgba(201,163,95,.14)' : 'transparent', border: s.filter === k ? gold : '#232c3d',
+      color: s.filter === k ? gold : '#9aa2b1', onClick: () => this.setState({ filter: k }) }));
+    const entriesList = sorted.filter(e => s.filter === 'alle' || e.area === s.filter || (e.extras||[]).some(x => x.area === s.filter)).map(e => {
+      const exp = s.expandedId === e.date;
+      const levelsQA = this.LEVELQ.map((q,i) => ({ q, a: (e.levels[i]||'').trim() })).filter(x => x.a);
+      const hiebeList = e.hiebe.filter(h => h.text.trim()).map(h => ({ text: h.text, meta: meta(h), mark: h.done ? '✓' : '○', markColor: h.done ? gold : '#535c6f' }));
+      return { dateLabel: this.fmtShort(e.date), areaLabel: this.areaLabel(e.area) || '—', success: e.success,
+        expanded: exp, chev: exp ? '–' : '+', toggle: () => this.setState({ expandedId: exp ? null : e.date }),
+        hasLevels: !!levelsQA.length, levelsQA, hasWhy: !!(e.why||'').trim(), why: e.why,
+        hasExpand: !!(e.expand||'').trim(), expandTxt: e.expand,
+        hasNext: !!(e.nextSteps||[]).length, nextStepsList: (e.nextSteps||[]).map(t => ({ t })),
+        hasHiebe: !!hiebeList.length, hiebeList,
+        hasExtras: !!(e.extras||[]).length, extrasList: (e.extras||[]).map(x => ({ text: x.text, area: this.areaLabel(x.area) })) };
+    });
+    const formulaItems = s.formula.map((t,i) => ({ text: t, remove: () => this.st({ formula: this.state.formula.filter((_,j) => j !== i) }) }));
+    const addFormula = () => { const v = s.formulaInput.trim(); if (v) this.st({ formula: [...s.formula, v], formulaInput: '' }); };
+
+    return {
+      isSetup, isApp: s.loaded && !isSetup,
+      setupFields, setupDisabled: !setupReady, setupOpacity: setupReady ? 1 : .45,
+      finishSetup: () => { if (setupReady) this.st({ goals: { ...s.setupDraft }, zieleDraft: { ...s.setupDraft }, setupDone: true }); },
+      navItems, streakVisible: streak > 0, streakLabel: streak === 1 ? '1 Tag in Folge' : streak + ' Tage in Folge',
+      isReflect: s.view === 'reflect', isMorgen: s.view === 'morgen', isRueck: s.view === 'rueck', isZiele: s.view === 'ziele',
+      navReflect: () => this.setState({ view: 'reflect' }),
+      // intro
+      stageIntro: s.stage === 'intro', todayLong: this.fmtLong(today), hasRecap, recapText,
+      startLabel: todayEntry ? 'Heutige Reflexion öffnen' : 'Reflexion beginnen',
+      startReflection: this.startReflection,
+      // steps
+      stageSteps: s.stage === 'steps', stepLabel, dots,
+      isStepA: s.step === 0, isStepB: s.step === 1, isStepC: s.step === 2, isStepD: s.step === 3, isStepE: s.step === 4, isStepF: s.step === 5,
+      isExtras: s.step === 6, notExtras: s.step < 6,
+      successVal: d.success, onSuccess: e => { const v = e.target.value; this.upd(dr => { dr.success = v; }); },
+      areaChips, levels,
+      draftAreaLabel: this.areaLabel(d.area) || 'Lebensbereich', draftGoal: (goals[d.area]||'').trim() || 'Noch kein Ziel für diesen Bereich hinterlegt.',
+      whyVal: d.why, onWhy: e => { const v = e.target.value; this.upd(dr => { dr.why = v; }); },
+      expandVal: d.expand, onExpand: e => { const v = e.target.value; this.upd(dr => { dr.expand = v; }); },
+      nextSteps, addStep: () => this.upd(dr => { dr.nextSteps.push(''); }),
+      hiebe, extras, addExtra: () => this.upd(dr => { dr.extras.push({ text:'', area:'' }); }),
+      goBack: () => { if (s.step === 0) this.setState({ stage: 'intro' }); else this.setState({ step: s.step - 1 }); },
+      goNext: () => { if (canNext && s.step < 6) this.setState({ step: s.step + 1 }); },
+      nextDisabled: !canNext, nextOpacity: canNext ? 1 : .45,
+      finish: this.finish,
+      // done
+      stageDone: s.stage === 'done',
+      doneStreakLine: streak > 1 ? 'Das ist dein ' + streak + '. Abend in Folge. Deine Hiebe für morgen stehen.' : 'Deine Reflexion ist gespeichert. Deine Hiebe für morgen stehen.',
+      doneHiebe, toMorgen: () => this.setState({ view: 'morgen', stage: 'intro' }),
+      // morgen
+      hasMorgen: morgenHiebe.length > 0, noMorgen: morgenHiebe.length === 0,
+      morgenDateLabel: morgenEntry ? this.fmtShort(morgenEntry.date) : '', morgenHiebe, morgenProgress,
+      // rueckblick
+      hasEntries: entries.length > 0, noEntries: entries.length === 0,
+      areaStats, quotaPct, quotaSub: hDone + ' von ' + hTotal + ' Hieben umgesetzt', entryCount: entries.length,
+      impulseVisible: s.impulseWeek !== this.weekKey(), dismissImpulse: () => this.st({ impulseWeek: this.weekKey() }),
+      formulaItems, formulaInput: s.formulaInput,
+      onFormulaInput: e => this.setState({ formulaInput: e.target.value }),
+      onFormulaKey: e => { if (e.key === 'Enter') addFormula(); },
+      addFormula, filterChips, entriesList,
+      // ziele
+      zieleFields, zieleSavedVisible: s.zieleSaved,
+      saveZiele: () => this.st({ goals: { ...(this.state.zieleDraft || this.state.goals) }, zieleSaved: true })
+    };
+  }
+  setupFilled(g){ return this.AREAS.every(([k]) => (g[k]||'').trim()); }
+}
+</script>
+</body>
+</html>
