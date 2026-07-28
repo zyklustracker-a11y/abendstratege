@@ -27,12 +27,18 @@ function value(fromEnv: string | undefined, fallback: string): string {
 }
 
 export const firebaseConfig = {
-  apiKey: value(env.VITE_FIREBASE_API_KEY, 'HIER_API_KEY_EINTRAGEN'),
-  authDomain: value(env.VITE_FIREBASE_AUTH_DOMAIN, 'HIER_AUTH_DOMAIN_EINTRAGEN'),
-  projectId: value(env.VITE_FIREBASE_PROJECT_ID, 'HIER_PROJECT_ID_EINTRAGEN'),
-  storageBucket: value(env.VITE_FIREBASE_STORAGE_BUCKET, 'HIER_STORAGE_BUCKET_EINTRAGEN'),
-  messagingSenderId: value(env.VITE_FIREBASE_MESSAGING_SENDER_ID, 'HIER_SENDER_ID_EINTRAGEN'),
-  appId: value(env.VITE_FIREBASE_APP_ID, 'HIER_APP_ID_EINTRAGEN'),
+  apiKey: value(env.VITE_FIREBASE_API_KEY, 'AIzaSyDLCcc0O_1h9EDXaRPUx5IPgVjDRYAl-Kk'),
+  /**
+   * Bewusst `web.app` statt des von der Konsole vorgeschlagenen
+   * `abendstrategen.firebaseapp.com`: Die App läuft unter dieser Adresse, und
+   * der Anmelde-Helfer liegt damit auf derselben Domain. Auf dem iPhone im
+   * Homescreen-Modus sperrt Safari sonst die Rückkehr von Google.
+   */
+  authDomain: value(env.VITE_FIREBASE_AUTH_DOMAIN, 'abendstrategen.web.app'),
+  projectId: value(env.VITE_FIREBASE_PROJECT_ID, 'abendstrategen'),
+  storageBucket: value(env.VITE_FIREBASE_STORAGE_BUCKET, 'abendstrategen.firebasestorage.app'),
+  messagingSenderId: value(env.VITE_FIREBASE_MESSAGING_SENDER_ID, '369654552258'),
+  appId: value(env.VITE_FIREBASE_APP_ID, '1:369654552258:web:9c8bf2f9f8a76340ea8d5b'),
 }
 
 /** Öffentlicher VAPID-Schlüssel für Web Push. Darf im Quelltext stehen. */
