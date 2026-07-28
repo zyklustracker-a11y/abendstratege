@@ -146,17 +146,20 @@ Ohne diesen Schritt verweigert Google die Anmeldung auf der echten Adresse.
 2. **„Domain hinzufügen“** → `DEIN-PROJEKT.web.app`.
 3. Das Gleiche noch einmal für `DEIN-PROJEKT.firebaseapp.com`.
 
-## 11. Repo öffentlich schalten (wegen der Erinnerungen)
+## 11. Nichts zu tun – aber gut zu wissen
 
-Der Erinnerungs-Job läuft alle 15 Minuten. Bei **öffentlichen** Repos sind
-GitHub Actions unbegrenzt kostenlos, bei privaten gibt es 2 000 Minuten im
-Monat – das würde nicht reichen.
+Der Erinnerungs-Job läuft alle 15 Minuten. Dein Repo ist bereits **öffentlich**,
+und bei öffentlichen Repos sind GitHub Actions unbegrenzt kostenlos. Hier ist
+also nichts einzurichten.
 
-- Entweder: `Settings → General → ganz unten „Change repository visibility“ →
-  **Public**`. Im Code stehen keine Geheimnisse, die Secrets bleiben auch bei
-  einem öffentlichen Repo verborgen.
-- Oder: Repo privat lassen und in `.github/workflows/reminder.yml` den Takt auf
-  `'*/30 * * * *'` ändern (≈ 1 440 Minuten im Monat, passt gerade so).
+Falls du das Repo später auf **privat** umstellst: Dann gelten 2 000 Minuten im
+Monat, und der Viertelstundentakt würde sie überschreiten. Ändere in
+`.github/workflows/reminder.yml` den Takt dann auf `'*/30 * * * *'`.
+
+Öffentlich heißt übrigens nicht, dass jemand an deine Aufzeichnungen käme: Im
+Repo liegt nur der Programmcode. Deine Abende liegen in Firestore hinter den
+Sicherheitsregeln, und die Secrets aus Schritt 8 sind auch bei einem
+öffentlichen Repo für niemanden sichtbar.
 
 ---
 
