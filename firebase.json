@@ -11,7 +11,6 @@
     ],
     "headers": [
       {
-        "comment": "Der Service Worker darf nie aus dem Cache kommen – sonst bleibt eine alte Fassung liegen.",
         "source": "/sw.js",
         "headers": [
           { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
@@ -26,7 +25,6 @@
         ]
       },
       {
-        "comment": "Gebaute Dateien tragen einen Hash im Namen und ändern sich nie.",
         "source": "/assets/**",
         "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
       },
