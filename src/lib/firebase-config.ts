@@ -42,7 +42,10 @@ export const firebaseConfig = {
 }
 
 /** Öffentlicher VAPID-Schlüssel für Web Push. Darf im Quelltext stehen. */
-export const vapidPublicKey = value(env.VITE_VAPID_PUBLIC_KEY, 'HIER_VAPID_PUBLIC_KEY_EINTRAGEN')
+export const vapidPublicKey = value(
+  env.VITE_VAPID_PUBLIC_KEY,
+  'BCj6FHwehR0oz1uqic3cpsfIK-zJeP9Hb702WDN61MZOHOtnLT5HJsQCN_sa8QtAtWVNEZ3dlacEtdSNfyPKQb4',
+)
 
 const placeholder = (v: string) => v.startsWith('HIER_')
 
