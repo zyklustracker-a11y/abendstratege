@@ -1929,6 +1929,56 @@ select:focus-visible {
   max-width: 58ch;
 }
 
+/* ---------- Diagnose der Erinnerung ---------- */
+
+.diagnose {
+  border-top: 1px solid var(--rule);
+  padding-top: 16px;
+  margin-top: 6px;
+}
+.diagnose__summary {
+  color: var(--muted-2);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  /* Bequem zu treffen, ohne wie ein Knopf auszusehen. */
+  padding: 6px 0;
+}
+.diagnose__summary:hover {
+  color: var(--ink-soft);
+}
+.diagnose__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0 4px;
+}
+.diagnose__row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+.diagnose__key {
+  width: 150px;
+  flex-shrink: 0;
+  font-size: 12.5px;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+}
+.diagnose__value {
+  flex: 1;
+  min-width: 140px;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.diagnose__note {
+  color: var(--faint);
+  font-size: 12.5px;
+}
+
 .status-dot {
   width: 8px;
   height: 8px;

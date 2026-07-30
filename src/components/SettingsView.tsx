@@ -8,8 +8,14 @@ import {
   isStandalone,
   notificationPermission,
   pushBlocker,
+  type PushBlocker,
 } from '../lib/platform'
-import { disablePushOnThisDevice, enablePushOnThisDevice, showTestNotification } from '../lib/push'
+import {
+  countPushDevices,
+  disablePushOnThisDevice,
+  enablePushOnThisDevice,
+  showTestNotification,
+} from '../lib/push'
 import { deviceTimeZone } from '../lib/storage'
 import type { Reminder } from '../lib/types'
 import type { ConfirmRequest } from './ConfirmDialog'
@@ -51,6 +57,28 @@ function blockerNotice(): Notice {
   }
 }
 
+/** Klartext für die Diagnose – dieselben Begriffe wie in den Hinweisen oben. */
+const BLOCKER_LABELS: Record<PushBlocker, string> = {
+  bereit: 'bereit',
+  'ios-nicht-installiert': 'iPhone: App nicht über „Zum Home-Bildschirm“ installiert',
+  'ios-zu-alt': 'iOS älter als 16.4',
+  'nicht-unterstuetzt': 'Browser kann keine Benachrichtigungen empfangen',
+  blockiert: 'im System abgelehnt',
+}
+
+function permissionLabel(value: NotificationPermission | 'nicht-verfuegbar'): string {
+  switch (value) {
+    case 'granted':
+      return 'erteilt'
+    case 'denied':
+      return 'abgelehnt'
+    case 'default':
+      return 'noch nicht gefragt'
+    default:
+      return 'nicht verfügbar'
+  }
+}
+
 export function SettingsView({ user, reminder, onReminder, onConfirm }: Props) {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<Notice>(null)
@@ -65,6 +93,17 @@ export function SettingsView({ user, reminder, onReminder, onConfirm }: Props) {
 
   const blocker = pushBlocker()
   const activeHere = permission === 'granted' && blocker === 'bereit'
+
+  // Die Gerätezahl ist ein Lesevorgang in Firestore – erst beim Aufklappen der
+  // Diagnose, und dann nur einmal.
+  const [devices, setDevices] = useState<number | 'unbekannt' | null>(null)
+  const openDiagnose = (open: boolean) => {
+    if (!open || devices !== null) return
+    void countPushDevices(user.uid).then(setDevices).catch(() => setDevices('unbekannt'))
+  }
+
+  const deviceZone = deviceTimeZone()
+  const zoneDiffers = Boolean(reminder.timeZone) && reminder.timeZone !== deviceZone
 
   const toggle = async (next: boolean) => {
     setNotice(null)
@@ -215,11 +254,76 @@ export function SettingsView({ user, reminder, onReminder, onConfirm }: Props) {
           </p>
         )}
 
+        {zoneDiffers && (
+          <p className="settings__hint">
+            Dieses Gerät steht in {deviceZone}, gespeichert ist {reminder.timeZone}. Die Erinnerung
+            kommt dann zur falschen Stunde.{' '}
+            <button
+              type="button"
+              className="btn-text"
+              onClick={() => onReminder({ timeZone: deviceZone })}
+            >
+              Zeitzone dieses Geräts übernehmen
+            </button>
+          </p>
+        )}
+
         <div className="settings__row">
           <button type="button" className="btn-outline" onClick={() => void test()} disabled={busy}>
             Testbenachrichtigung senden
           </button>
         </div>
+
+        {/* Zugeklappt, weil es im Alltag niemanden interessiert: Es sind die Werte,
+            die man sonst in der Firebase-Konsole zusammensuchen müsste, wenn eine
+            Erinnerung ausbleibt. Ein Statusfenster, kein Alarm. */}
+        <details className="diagnose" onToggle={(e) => openDiagnose(e.currentTarget.open)}>
+          <summary className="diagnose__summary">Diagnose</summary>
+          <dl className="diagnose__rows">
+            <div className="diagnose__row">
+              <dt className="diagnose__key">Berechtigung</dt>
+              <dd className="diagnose__value">{permissionLabel(permission)}</dd>
+            </div>
+            <div className="diagnose__row">
+              <dt className="diagnose__key">Dieses Gerät</dt>
+              <dd className="diagnose__value">{BLOCKER_LABELS[blocker]}</dd>
+            </div>
+            <div className="diagnose__row">
+              <dt className="diagnose__key">Als App installiert</dt>
+              <dd className="diagnose__value">{isStandalone() ? 'ja' : 'nein'}</dd>
+            </div>
+            <div className="diagnose__row">
+              <dt className="diagnose__key">Erinnerung</dt>
+              <dd className="diagnose__value">
+                {reminder.enabled ? 'eingeschaltet' : 'ausgeschaltet'}, {reminder.time} Uhr
+              </dd>
+            </div>
+            <div className="diagnose__row">
+              <dt className="diagnose__key">Zeitzone</dt>
+              <dd className="diagnose__value">
+                {reminder.timeZone}
+                {zoneDiffers ? ` · dieses Gerät: ${deviceZone}` : ' · stimmt mit dem Gerät überein'}
+              </dd>
+            </div>
+            <div className="diagnose__row">
+              <dt className="diagnose__key">Geräte im Verteiler</dt>
+              <dd className="diagnose__value">
+                {devices === null
+                  ? 'wird geladen …'
+                  : devices === 'unbekannt'
+                    ? 'nicht abrufbar'
+                    : String(devices)}
+              </dd>
+            </div>
+            <div className="diagnose__row">
+              <dt className="diagnose__key">Zuletzt verschickt</dt>
+              <dd className="diagnose__value">
+                {reminder.lastSentLocalDate ?? 'noch nie'}
+                <span className="diagnose__note"> · wird vom Versand-Job geführt</span>
+              </dd>
+            </div>
+          </dl>
+        </details>
       </section>
     </div>
   )

@@ -79,9 +79,13 @@ self.addEventListener('push', (event) => {
     payload = { body: event.data ? event.data.text() : '' }
   }
 
-  const title = payload.title || 'Der Abendstratege'
+  // Rückfallwerte, falls eine Benachrichtigung ohne Nutzlast ankommt. Derselbe
+  // Wortlaut steht in src/lib/constants.ts (Testbenachrichtigung) und in
+  // scripts/send-reminders.mjs (echter Versand) – alle drei gehören zusammen.
+  // Der Titel wiederholt den App-Namen nicht: Das System stellt ihn voran.
+  const title = payload.title || 'Zeit für deine Reflexion'
   const options = {
-    body: payload.body || 'Nimm dir jetzt kurz Zeit für deine Reflexion.',
+    body: payload.body || 'Ein Erfolg von heute – und ein Hieb für morgen.',
     icon: payload.icon || '/icon-192.png',
     badge: payload.badge || '/badge-72.png',
     tag: payload.tag || 'abend-erinnerung',

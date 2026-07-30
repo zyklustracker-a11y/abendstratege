@@ -70,5 +70,16 @@ export const MAX_HIEBE = 5
 /** Voreinstellung der Abend-Erinnerung. */
 export const DEFAULT_REMINDER_TIME = '21:00'
 
-export const NOTIFICATION_TITLE = 'Der Abendstratege'
-export const NOTIFICATION_BODY = 'Nimm dir jetzt kurz Zeit für deine Reflexion.'
+/**
+ * Text der Testbenachrichtigung in der App. Derselbe Wortlaut steht zwangsläufig
+ * noch an zwei weiteren Stellen, weil die drei Umgebungen sich nichts teilen
+ * können – wer hier ändert, ändert beide mit:
+ *
+ *   public/sw.js               Rückfallwerte im Service Worker (kein Build-Schritt)
+ *   scripts/send-reminders.mjs der echte serverseitige Versand
+ *
+ * Der Titel nennt den App-Namen nicht: Das Betriebssystem stellt ihn der
+ * Benachrichtigung ohnehin voran, sonst stünde er zweimal da.
+ */
+export const NOTIFICATION_TITLE = 'Zeit für deine Reflexion'
+export const NOTIFICATION_BODY = 'Ein Erfolg von heute – und ein Hieb für morgen.'

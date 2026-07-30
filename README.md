@@ -199,3 +199,47 @@ Zum Prüfen ohne Warten auf den Abend:
 - **Über den echten Weg:** GitHub → Actions → „Abend-Erinnerung“ → „Run
   workflow“ mit Modus `test`. Das geht denselben Weg wie abends um 21:00 Uhr,
   ignoriert aber Uhrzeit und Tagesstand.
+
+### Wenn nichts ankommt
+
+In dieser Reihenfolge – die ersten beiden Punkte erklären die meisten Fälle:
+
+1. **Lief der Job überhaupt?** GitHub → Actions → „Abend-Erinnerung“. Drei
+   Eigenheiten geplanter Workflows sind hier üblich: Sie laufen nur auf dem
+   Standard-Branch; GitHub schaltet sie nach längerer Inaktivität im Repository
+   von selbst ab (die Actions-Seite bietet dann „Enable workflow“ an); und ein
+   `*/15`-Takt wird auf geteilten Runnern zu Stoßzeiten verzögert oder ganz
+   übersprungen. Jeder Lauf schreibt inzwischen eine Zusammenfassung – geprüfte
+   Konten, fällige, zugestellte, entfernte Abos, Fehler mit Statuscode – und
+   schlägt fehl, wenn niemand erreicht wurde. Ein Lauf ohne Konto mit aktiver
+   Erinnerung gilt ebenfalls als Fehler; wer die Erinnerung bewusst abschaltet,
+   sieht den Job also rot.
+2. **Kam der Lauf zu spät?** `NACHLAUF_MINUTEN` in `scripts/schedule.mjs` steht
+   auf 90. Ein Lauf danach stellt nichts mehr zu – in der Zusammenfassung steht
+   das jetzt als „Nachlauf vorbei“.
+3. **Steht die Erinnerung serverseitig auf aktiv?** Einstellungen → „Diagnose“
+   zeigt Berechtigung, Installationszustand, Uhrzeit, Zeitzone, Anzahl der
+   Geräte und den letzten Versandvermerk. In der Firestore-Konsole liegen
+   dieselben Werte unter `users/{uid}.reminder`. Der Versand filtert über
+   `where('reminder.enabled', '==', true)`: Fehlt das Feld oder ist es anders
+   geschrieben, wird das Konto nie gefunden.
+4. **Gibt es ein Gerät im Verteiler?** `users/{uid}/devices` braucht mindestens
+   ein Dokument mit `endpoint` und beiden Schlüsseln; die Diagnose zeigt die
+   Anzahl. Auf dem iPhone entsteht es nur, wenn die App über „Zum
+   Home-Bildschirm“ installiert ist **und** die Berechtigung aus dieser
+   installierten App heraus erteilt wurde. Apple entwertet Abos außerdem still,
+   wenn eine App lange nicht geöffnet wurde – dann hilft nur, die Erinnerung
+   einmal aus- und wieder einzuschalten.
+5. **Stimmt die Zeitzone?** Weicht die Zeitzone des Geräts von der gespeicherten
+   ab, weist die Diagnose darauf hin und bietet an, sie zu übernehmen. Das ist
+   der häufigste Grund für eine Erinnerung zur falschen Stunde.
+6. **Passen die VAPID-Schlüssel zusammen?** Der öffentliche Schlüssel in
+   `src/lib/firebase-config.ts` und das Paar in den GitHub-Secrets müssen aus
+   demselben Satz stammen. Sonst lehnt der Push-Dienst mit 403 ab; der
+   Statuscode steht in der Zusammenfassung des Laufs, mit ausdrücklichem
+   Hinweis auf das Schlüsselpaar.
+
+`reminder.lastSentLocalDate` gehört dem Versand-Job. Der Client liest das Feld
+(für die Diagnose), schreibt es aber nie – täte er es, überschriebe schon ein
+Tastendruck im Entwurf den Vermerk des Jobs mit einem älteren Stand, und die
+Erinnerung ginge doppelt raus oder bliebe ganz aus.
