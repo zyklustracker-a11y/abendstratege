@@ -300,6 +300,9 @@ textarea {
 .fields--ziele {
   gap: 24px;
 }
+.fields--setup {
+  gap: 20px;
+}
 .field {
   display: flex;
   flex-direction: column;
@@ -335,7 +338,9 @@ textarea {
 .setup {
   width: 100%;
   max-width: 560px;
-  padding: 64px 24px 80px;
+  /* Knapper als der übrige Raum der App: Die Liste der Bereiche kann lang sein,
+     und der Knopf darunter soll erreichbar bleiben, ohne weit zu scrollen. */
+  padding: 48px 24px 72px;
   box-sizing: border-box;
 }
 .setup__eyebrow {
@@ -357,12 +362,20 @@ textarea {
   color: var(--muted);
   font-size: 15.5px;
   line-height: 1.65;
-  margin: 0 0 40px;
+  margin: 0 0 32px;
   max-width: 46ch;
   text-wrap: pretty;
 }
+.setup__field-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.setup__field-label {
+  flex: 1;
+}
 .setup__submit {
-  margin-top: 40px;
+  margin-top: 32px;
   width: 100%;
   padding: 15px 20px;
   font-size: 15.5px;
@@ -373,6 +386,20 @@ textarea {
   color: var(--dim);
   font-size: 13px;
   margin-top: 14px;
+}
+
+/*
+ * Auf dem Handy braucht der Titel bei 40 px vier statt zwei Zeilen und schiebt
+ * die Felder samt Knopf weit nach unten. Kleiner gesetzt bleibt die Liste auch
+ * bei neun Bereichen in erreichbarer Nähe.
+ */
+@media (max-width: 400px) {
+  .setup {
+    padding-top: 40px;
+  }
+  .setup__title {
+    font-size: 30px;
+  }
 }
 
 /* ---------- Rahmen der App ---------- */

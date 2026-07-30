@@ -35,7 +35,8 @@ export interface Store {
   setAreaGoal: (areaId: string, goal: string) => void
   /** Löscht den Bereich – oder archiviert ihn, solange Einträge auf ihn zeigen. */
   removeArea: (areaId: string) => void
-  finishSetup: (goals: Record<string, string>) => void
+  /** Schließt die Einrichtung ab; nicht behaltene Vorschläge fallen dabei weg. */
+  finishSetup: (goals: Record<string, string>, keptAreaIds: string[]) => void
   /** Reflexion */
   beginDraft: (date: string) => void
   updateDraft: (mutate: (draft: Draft) => void) => void
@@ -215,11 +216,15 @@ export function useStore(user: User): Store {
     })
   }, [])
 
-  const finishSetup = useCallback((goals: Record<string, string>) => {
+  const finishSetup = useCallback((goals: Record<string, string>, keptAreaIds: string[]) => {
     setData((s) => ({
       ...s,
       setupDone: true,
-      areas: s.areas.map((a) => ({ ...a, goal: goals[a.id] ?? a.goal })),
+      // Bei der Einrichtung abgewählte Bereiche werden entfernt, nicht archiviert:
+      // Es gibt noch keinen Eintrag, der auf sie zeigen könnte.
+      areas: s.areas
+        .filter((a) => keptAreaIds.includes(a.id))
+        .map((a) => ({ ...a, goal: goals[a.id] ?? a.goal })),
     }))
   }, [])
 

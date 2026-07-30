@@ -1,4 +1,4 @@
-import { DEFAULT_AREAS, DEFAULT_REMINDER_TIME } from './constants'
+import { DEFAULT_AREAS, DEFAULT_REMINDER_TIME, LEGACY_V1_AREAS } from './constants'
 import { newId } from './id'
 import type { Area, Entry, Hieb, PersistedState, Reminder } from './types'
 
@@ -6,6 +6,7 @@ import type { Area, Entry, Hieb, PersistedState, Reminder } from './types'
 const KEY = 'abendstratege-v1'
 export const CURRENT_VERSION = 2
 
+/** Die Bereiche eines frisch angelegten Kontos – und nur dafür. */
 export function defaultAreas(): Area[] {
   return DEFAULT_AREAS.map(([id, name]) => ({ id, name, goal: '' }))
 }
@@ -102,7 +103,9 @@ function migrateEntryV1(raw: Record<string, unknown>): Entry | null {
 
 function migrateV1(data: Record<string, unknown>): PersistedState {
   const goals = (data.goals ?? {}) as Record<string, unknown>
-  const areas = DEFAULT_AREAS.map(([id, name]) => ({ id, name, goal: str(goals[id]) }))
+  // Bewusst LEGACY_V1_AREAS und nicht die heutige Vorgabeliste: Format 1 kannte
+  // genau diese fünf ids, und nur unter ihnen liegen die gespeicherten Ziele.
+  const areas = LEGACY_V1_AREAS.map(([id, name]) => ({ id, name, goal: str(goals[id]) }))
 
   const rawEntries = Array.isArray(data.entries) ? data.entries : []
   const entries = rawEntries
@@ -125,7 +128,12 @@ function migrateV1(data: Record<string, unknown>): PersistedState {
 
 function readV2(data: Record<string, unknown>): PersistedState {
   const state = emptyState()
-  if (Array.isArray(data.areas) && data.areas.length) {
+  // Sobald ein Stand eine Bereichsliste mitbringt, gilt ausschließlich sie – die
+  // Vorgabewerte aus emptyState() greifen nur, wenn das Feld ganz fehlt. Auch
+  // eine leere Liste ist eine Entscheidung des Nutzers: Wer alle Bereiche
+  // entfernt hat, bekäme sonst beim nächsten Laden die jeweils aktuelle
+  // Vorgabeliste untergeschoben.
+  if (Array.isArray(data.areas)) {
     state.areas = data.areas
       .filter((a) => a && str(a.id))
       .map((a) => ({

@@ -4,15 +4,45 @@ import type { Area } from '../lib/types'
 
 interface Props {
   areas: Area[]
-  onFinish: (goals: Record<string, string>) => void
+  onFinish: (goals: Record<string, string>, keptAreaIds: string[]) => void
 }
 
-/** Einmaliger erster Start: je ein Leitziel für die fünf vorgeschlagenen Bereiche. */
+/**
+ * Kleine Zahlwörter, damit die Texte sich der Länge der Vorgabeliste anpassen,
+ * ohne in Ziffern zu verfallen. Darüber hinaus schreibt niemand mehr aus.
+ */
+const WORDS = [
+  'null',
+  'ein',
+  'zwei',
+  'drei',
+  'vier',
+  'fünf',
+  'sechs',
+  'sieben',
+  'acht',
+  'neun',
+  'zehn',
+  'elf',
+  'zwölf',
+]
+
+function word(n: number): string {
+  return WORDS[n] ?? String(n)
+}
+
+/** Einmaliger erster Start: je ein Leitziel für die vorgeschlagenen Bereiche. */
 export function SetupScreen({ areas, onFinish }: Props) {
   const [goals, setGoals] = useState<Record<string, string>>(() =>
     Object.fromEntries(areas.map((a) => [a.id, a.goal])),
   )
-  const ready = areas.every((a) => (goals[a.id] ?? '').trim())
+  // Wer einen Vorschlag hier schon aussortiert, muss ihm kein Ziel geben. Nur
+  // lokal: Geschrieben wird die Auswahl erst beim Abschluss.
+  const [removed, setRemoved] = useState<string[]>([])
+
+  const visible = areas.filter((a) => !removed.includes(a.id))
+  const missing = visible.filter((a) => !(goals[a.id] ?? '').trim()).length
+  const ready = visible.length > 0 && missing === 0
 
   return (
     <div className="setup fade-in--slow">
@@ -20,20 +50,35 @@ export function SetupScreen({ areas, onFinish }: Props) {
       <h1 className="setup__title">
         Bevor du beginnst:
         <br />
-        deine fünf Leitziele.
+        {visible.length === 1 ? 'dein Leitziel.' : `deine ${word(visible.length)} Leitziele.`}
       </h1>
       <p className="setup__lead">
-        Definiere je ein übergeordnetes Ziel in fünf Lebensbereichen. Sie sind das Fundament dieser
-        App – jeder Erfolg wird später an ihnen gemessen. Bereiche und Ziele kannst du später
-        jederzeit ändern, ergänzen oder entfernen.
+        {visible.length === 1
+          ? 'Definiere ein übergeordnetes Ziel für diesen Lebensbereich. Es ist das Fundament dieser App – jeder Erfolg wird später an ihm gemessen.'
+          : `Definiere je ein übergeordnetes Ziel in diesen ${word(visible.length)} Lebensbereichen. Sie sind das Fundament dieser App – jeder Erfolg wird später an ihnen gemessen.`}{' '}
+        Bereiche und Ziele kannst du später jederzeit ändern, ergänzen oder entfernen. Was du nicht
+        brauchst, nimm gleich heraus.
       </p>
 
-      <div className="fields">
-        {areas.map((area) => (
+      <div className="fields fields--setup">
+        {visible.map((area) => (
           <div className="field" key={area.id}>
-            <label className="eyebrow" htmlFor={`setup-${area.id}`}>
-              {area.name}
-            </label>
+            <div className="setup__field-head">
+              <label className="eyebrow setup__field-label" htmlFor={`setup-${area.id}`}>
+                {area.name}
+              </label>
+              {visible.length > 1 && (
+                <button
+                  type="button"
+                  className="icon-btn icon-btn--quiet"
+                  title="Lebensbereich entfernen"
+                  aria-label={`Lebensbereich ${area.name} entfernen`}
+                  onClick={() => setRemoved((current) => [...current, area.id])}
+                >
+                  ×
+                </button>
+              )}
+            </div>
             <textarea
               id={`setup-${area.id}`}
               className="goal-textarea"
@@ -50,11 +95,17 @@ export function SetupScreen({ areas, onFinish }: Props) {
         type="button"
         className="btn-primary setup__submit"
         disabled={!ready}
-        onClick={() => ready && onFinish(goals)}
+        onClick={() => ready && onFinish(goals, visible.map((a) => a.id))}
       >
         Meine Ziele festhalten
       </button>
-      <p className="setup__hint">Alle fünf Bereiche brauchen ein Ziel.</p>
+      <p className="setup__hint">
+        {missing === 0
+          ? 'Jeder Bereich hat ein Ziel.'
+          : missing === 1
+            ? 'Noch ein Ziel fehlt.'
+            : `Noch ${word(missing)} Ziele fehlen.`}
+      </p>
     </div>
   )
 }
