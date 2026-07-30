@@ -32,9 +32,14 @@ npm test            # Terminlogik des Versands + Firestore-Regeln (braucht Emula
 npm run icons       # Icons aus assets/icon.svg neu erzeugen
 ```
 
-`npm run typecheck` ist die verbindliche Abnahme. `npm test` deckt nur
-`scripts/schedule.mjs` und `firestore.rules` ab — wer an einem von beiden
-arbeitet, führt es aus.
+`npm run typecheck` ist die verbindliche Abnahme. `npm test` deckt
+`scripts/schedule.mjs`, die Wochenrechnung in `src/lib/date.ts` und
+`firestore.rules` ab — wer an einem davon arbeitet, führt es aus.
+
+`scripts/test-week.mjs` lädt `src/lib/date.ts` direkt über
+`node --experimental-strip-types`. Das geht nur, solange die geprüfte Datei
+keine Modulimporte ohne Dateiendung hat: Node löst `'./date'` nicht auf, Vite
+schon. Wer weitere reine Logik so prüfen will, beachtet das.
 
 ## Harte Randbedingungen
 
@@ -95,8 +100,22 @@ oder `Reminder` muss durchgezogen werden durch:
 
 `migrateV1()` beschreibt das allererste Format und ist historisch: Es liest
 Stände, die es in freier Wildbahn noch gibt. **Nicht an neue Anforderungen
-anpassen** — wer die Vorgabewerte für neue Konten ändert, führt eine neue
-Konstante ein und lässt die V1-Migration auf ihren alten Werten stehen.
+anpassen.** Es stützt sich dafür auf `LEGACY_V1_AREAS` — die fünf Bereiche der
+ersten Fassung, unveränderlich, weil nur unter diesen ids die gespeicherten
+Ziele liegen.
+
+`DEFAULT_AREAS` daneben gilt **allein für neu angelegte Konten** und darf in
+Länge und Inhalt frei geändert werden; sonst muss dafür nichts angefasst
+werden. Bedingungen: ids klein, ohne Umlaute und Leerzeichen, und eine id, die
+in `GOAL_PLACEHOLDERS` steht, erbt deren Beispieltext. Für die aktuelle
+Vorgabeliste ist bewusst kein Beispielziel hinterlegt — die Formulierung soll
+niemandem vorweggenommen werden.
+
+Entscheidend für Bestandskonten ist `readV2()`: Bringt ein Stand eine
+Bereichsliste mit, gilt ausschließlich sie — auch wenn sie leer ist. Die
+Vorgabewerte greifen nur, wenn das Feld ganz fehlt. Diese Bedingung nicht
+aufweichen, sonst schiebt die nächste Änderung an `DEFAULT_AREAS` bestehenden
+Konten Bereiche unter.
 
 Ablage in Firestore:
 
@@ -132,7 +151,11 @@ und ergänzt bei Bedarf `scripts/test-rules.mjs`.
 - Neue Regeln in den passenden, mit `/* ---------- … ---------- */`
   überschriebenen Abschnitt einsortieren, nicht ans Dateiende hängen.
 - Zielgerät ist das Handy im Homescreen-Modus. Jede Layout-Änderung wird
-  gedanklich gegen 320 px Breite geprüft, nicht nur gegen den Desktop.
+  gegen 320 px Breite geprüft, nicht nur gegen den Desktop.
+- Es gibt genau zwei Breakpoints: `max-width: 480px` (Handy) und
+  `max-width: 400px` (schmales Handy). Keine weiteren erfinden — vorhandene
+  mitbenutzen. Media Queries stehen unmittelbar bei den Regeln, die sie
+  abwandeln, und arbeiten additiv: Das Desktop-Bild bleibt unverändert.
 
 ## Barrierefreiheit
 
@@ -153,6 +176,11 @@ drei Umgebungen sich nichts teilen können:
 
 Wer einen davon ändert, ändert alle drei. Der Text soll den App-Namen **nicht**
 wiederholen: Das Betriebssystem stellt ihn der Benachrichtigung ohnehin voran.
+
+`reminder.lastSentLocalDate` gehört dem Server. Der Client liest das Feld, aber
+`rootPayload()` und `saveReminder()` schreiben es nie — täte der Client es,
+überschriebe ein Tastendruck im Entwurf den Vermerk des Versand-Jobs, und die
+Erinnerung ginge doppelt raus oder bliebe ganz aus.
 
 ## Arbeitsweise
 
