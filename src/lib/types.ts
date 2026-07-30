@@ -86,6 +86,14 @@ export interface PersistedState {
   /** Die Erfolgsformel wurde entfernt; alte Einträge bleiben unangetastet liegen. */
   legacyFormula: string[]
   reminder: Reminder
+  /**
+   * Ein selbst geschriebener Satz je Kalenderwoche, Schlüssel „2026-W31“.
+   * Liegt im Wurzeldokument, nicht in den Abend-Dokumenten: Der Satz gehört
+   * keinem einzelnen Abend, und das Wurzeldokument wird beim Schreiben des
+   * Entwurfs ohnehin angefasst – die Zahl der Schreibvorgänge steigt dadurch
+   * also nicht.
+   */
+  weeklyHighlights: Record<string, string>
 }
 
 export type View = 'reflect' | 'morgen' | 'rueck' | 'ziele' | 'einstellungen'
@@ -101,3 +109,6 @@ export type Stage = 'intro' | 'pick' | 'run' | 'more' | 'hiebe' | 'done'
 
 /** 'alle' oder die id eines Lebensbereichs. */
 export type Filter = string
+
+/** Zeitraum des Rückblicks – reiner Ansichtszustand, nichts davon wird gespeichert. */
+export type Period = 'woche' | 'jahr' | 'alles'

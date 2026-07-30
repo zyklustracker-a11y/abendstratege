@@ -43,6 +43,7 @@ function rootPayload(state: PersistedState) {
     setupDone: state.setupDone,
     legacyFormula: state.legacyFormula,
     draft: state.draft,
+    weeklyHighlights: state.weeklyHighlights,
     reminder: state.reminder,
   })
 }

@@ -33,6 +33,7 @@ export function emptyState(): PersistedState {
     setupDone: false,
     legacyFormula: [],
     reminder: defaultReminder(),
+    weeklyHighlights: {},
   }
 }
 
@@ -123,6 +124,8 @@ function migrateV1(data: Record<string, unknown>): PersistedState {
     setupDone: Boolean(data.setupDone),
     legacyFormula: Array.isArray(data.formula) ? data.formula.map(str) : [],
     reminder: defaultReminder(),
+    // Format 1 kannte keine Wochenhighlights.
+    weeklyHighlights: {},
   }
 }
 
@@ -170,7 +173,22 @@ function readV2(data: Record<string, unknown>): PersistedState {
   state.setupDone = Boolean(data.setupDone)
   if (Array.isArray(data.legacyFormula)) state.legacyFormula = data.legacyFormula.map(str)
   state.reminder = reminderOf(data.reminder)
+  state.weeklyHighlights = highlightsOf(data.weeklyHighlights)
   return state
+}
+
+/**
+ * Die Wochenhighlights sind später dazugekommen; ältere Stände kennen das Feld
+ * nicht und sind mit einer leeren Sammlung von sich aus gültig. Leere Sätze
+ * werden beim Lesen verworfen, damit sich keine leeren Schlüssel ansammeln.
+ */
+function highlightsOf(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object') return {}
+  const result: Record<string, string> = {}
+  for (const [key, text] of Object.entries(value as Record<string, unknown>)) {
+    if (str(text).trim()) result[key] = str(text)
+  }
+  return result
 }
 
 export function reminderOf(value: unknown): Reminder {

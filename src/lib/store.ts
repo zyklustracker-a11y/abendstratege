@@ -50,6 +50,8 @@ export interface Store {
   updateHieb: (date: string, hiebId: string, patch: Partial<Hieb>) => void
   toggleHieb: (date: string, hiebId: string) => void
   removeHieb: (date: string, hiebId: string) => void
+  /** Rückblick */
+  setWeeklyHighlight: (weekKey: string, text: string) => void
   /** Einstellungen */
   setReminder: (patch: Partial<Reminder>) => void
 }
@@ -329,6 +331,17 @@ export function useStore(user: User): Store {
     [patchEntry],
   )
 
+  const setWeeklyHighlight = useCallback((weekKey: string, text: string) => {
+    setData((s) => {
+      const weeklyHighlights = { ...s.weeklyHighlights }
+      // Ein geleerter Satz verschwindet, statt als leerer Schlüssel liegen zu
+      // bleiben – sonst wüchse die Sammlung mit jeder angetippten Woche.
+      if (text.trim()) weeklyHighlights[weekKey] = text
+      else delete weeklyHighlights[weekKey]
+      return { ...s, weeklyHighlights }
+    })
+  }, [])
+
   const setReminder = useCallback((patch: Partial<Reminder>) => {
     setData((s) => ({ ...s, reminder: { ...s.reminder, ...patch } }))
   }, [])
@@ -362,6 +375,7 @@ export function useStore(user: User): Store {
     updateHieb,
     toggleHieb,
     removeHieb,
+    setWeeklyHighlight,
     setReminder,
   }
 }

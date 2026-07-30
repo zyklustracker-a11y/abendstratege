@@ -332,6 +332,14 @@ textarea {
   margin-left: auto;
   margin-right: auto;
 }
+/* Innerhalb einer Ansicht statt an ihrer Stelle: knapper, und der letzte Absatz
+   trägt keinen Abstand, weil kein Knopf mehr folgt. */
+.empty-state--soft {
+  padding: 32px 24px;
+}
+.empty-state--soft .empty-state__text {
+  margin-bottom: 0;
+}
 
 /* ---------- Einrichtung ---------- */
 
@@ -957,10 +965,15 @@ textarea {
   gap: 10px;
 }
 .stats__label {
-  width: 74px;
+  /* Breiter als ursprünglich: Namen wie „Beruf, Karriere, Mission“ liefen sonst
+     über drei Zeilen und rissen die Balkenreihe auseinander. */
+  width: 96px;
   font-size: 13px;
   color: var(--muted);
   flex-shrink: 0;
+}
+.stats__label--month {
+  width: 34px;
 }
 .stats__bar {
   flex: 1;
@@ -1003,6 +1016,154 @@ textarea {
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 18px;
+}
+.filters--periods {
+  margin-bottom: 14px;
+}
+
+/* ---------- Rückblick: Zeitraum wählen und blättern ---------- */
+
+.periodnav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.periodnav__step {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1;
+  /* Bequem zu treffen, ohne die Zeile zu dominieren. */
+  min-width: 40px;
+  min-height: 40px;
+  cursor: pointer;
+  transition:
+    color 0.25s,
+    border-color 0.25s;
+}
+.periodnav__step:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.periodnav__step:disabled {
+  cursor: default;
+  color: var(--faint);
+  border-color: var(--rule);
+}
+.periodnav__label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: center;
+}
+.periodnav__title {
+  font-family: var(--serif);
+  font-size: 19px;
+  color: var(--ink);
+}
+.periodnav__sub {
+  font-size: 12.5px;
+  color: var(--muted-2);
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Rückblick: Woche und Jahr ---------- */
+
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.review__card {
+  padding: 20px 22px;
+}
+.review__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px 30px;
+  margin-top: 16px;
+}
+/* Gleichmäßig geteilt statt nebeneinander gestellt: Auf dem Handy stehen so zwei
+   Kennzahlen je Reihe, statt jede in eine eigene zu rutschen. */
+.review__fact {
+  flex: 1 1 96px;
+}
+.review__value {
+  font-family: var(--serif);
+  font-size: 30px;
+  color: var(--gold);
+  line-height: 1;
+}
+.review__value--plain {
+  color: var(--ink);
+}
+.review__of {
+  font-size: 17px;
+  color: var(--muted-2);
+}
+.review__caption {
+  font-size: 12.5px;
+  color: var(--muted-2);
+  margin-top: 7px;
+  line-height: 1.5;
+}
+.review__lines {
+  margin-top: 20px;
+  border-top: 1px solid var(--rule);
+  padding-top: 16px;
+}
+.review__line {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 0;
+}
+.review__line + .review__line {
+  margin-top: 6px;
+}
+.review__line--muted {
+  color: var(--muted-2);
+}
+.review__line strong {
+  color: var(--gold);
+  font-weight: 600;
+}
+.review__question {
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  margin: 14px 0 12px;
+}
+.review__highlight {
+  width: 100%;
+  box-sizing: border-box;
+}
+.review__highlights {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+.review__highlight-week {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  margin-bottom: 5px;
+}
+.review__highlight-text {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 0;
 }
 
 .entries {
