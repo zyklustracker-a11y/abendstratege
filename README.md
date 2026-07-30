@@ -43,7 +43,7 @@ npm install
 npm run dev        # Entwicklungsserver (http://localhost:5173)
 npm run build      # Produktionsbuild nach dist/
 npm run preview    # Build lokal prüfen
-npm test           # Terminlogik des Versands + Sicherheitsregeln
+npm test           # Terminlogik, Kalenderwochen und Sicherheitsregeln
 npm run icons      # Icons aus assets/icon.svg neu erzeugen
 ```
 
@@ -72,6 +72,25 @@ funktioniert die Google-Weiterleitung auf dem iPhone im Homescreen-Modus nicht
 zuverlässig. Außerdem liegt die App unter der Wurzel, sodass der Service Worker
 ohne Pfadkorrekturen für die ganze Anwendung zuständig ist.
 
+## Der erste Start
+
+Zwei Schritte, bevor es losgeht:
+
+1. **Worum es hier geht** – Bewusstsein, Momentum, Struktur, in vier kurzen
+   Blöcken. Derselbe Text steht später in den Einstellungen unter „Was ist der
+   Abendstratege?“ noch einmal.
+2. **Die Leitziele** – je ein übergeordnetes Ziel pro vorgeschlagenem
+   Lebensbereich. Vorschläge, die man nicht braucht, lassen sich hier schon
+   entfernen; die verbleibenden brauchen jeweils ein Ziel. Titel und Hinweise
+   richten sich nach der tatsächlichen Anzahl, nicht nach einer festen Zahl.
+
+Die Vorgabeliste steht als `DEFAULT_AREAS` in `src/lib/constants.ts` und gilt
+ausschließlich für neu angelegte Konten – sie lässt sich in Länge und Inhalt
+frei ändern, ohne dass ein anderer Codepfad angepasst werden muss. Bestehende
+Konten tragen ihre Bereiche in ihrem eigenen Stand und bleiben unberührt. Die
+fünf Bereiche der ersten Fassung stehen unverändert als `LEGACY_V1_AREAS`
+daneben; nur an ihnen hängt die Migration alter Stände.
+
 ## Der Abend im Ablauf
 
 1. **Bereich wählen** – in welchem Lebensbereich gab es heute einen Erfolg?
@@ -85,6 +104,29 @@ ohne Pfadkorrekturen für die ganze Anwendung zuständig ist.
 
 Alles daraus bleibt änderbar: Ein Abend im Rückblick öffnet denselben Ablauf
 erneut, einzelne Durchläufe lassen sich entfernen, Hiebe bearbeiten.
+
+## Rückblick & Muster
+
+Über der Auswertung steht ein Zeitraum: **Woche**, **Jahr** oder **Alles**.
+„Alles“ ist die Voreinstellung und zeigt das gewohnte Gesamtbild. Der Zeitraum
+gilt für Auswertung und Archivliste gemeinsam; der Bereichsfilter darunter wird
+mit ihm kombiniert. In Woche und Jahr lässt sich blättern – nicht über den
+ersten vorhandenen Eintrag hinaus und nicht in die Zukunft.
+
+- **Woche** – Zeitraum, an wie vielen der sieben Abende reflektiert wurde,
+  stärkster Lebensbereich, Bereiche ohne Eintrag, Umsetzungsquote der Hiebe und
+  die Zahl der vertieften Durchläufe. Dazu ein Feld für das **Wochenhighlight**:
+  ein selbst geschriebener Satz zu der Frage, was diese Woche der eine Moment
+  war, auf dem du aufbaust.
+- **Jahr** – Abende, Durchläufe, längste Serie des Jahres, die Verteilung über
+  die zwölf Monate, Erfolge nach Lebensbereich, Umsetzungsquote – und darunter
+  die Wochenhighlights des Jahrgangs, jüngste zuerst. Das ist die eigentliche
+  Zusammenfassung eines Jahres.
+
+Die Kalenderwoche folgt ISO 8601: Sie beginnt montags und gehört zu dem Jahr, in
+dem ihr Donnerstag liegt. Der 1. Januar kann deshalb noch zur letzten Woche des
+Vorjahres zählen. Die Wochenhighlights liegen unter ihrem Schlüssel
+(`2026-W31`) im Wurzeldokument des Kontos, nicht in den Abend-Dokumenten.
 
 ## Aufbau
 
@@ -100,9 +142,9 @@ src/
   styles.css          Design-Tokens (Farben, Schriften) und alle Komponenten-Styles
   lib/
     types.ts          Datenmodell (Area, AreaReflection, Hieb, Entry, Reminder …)
-    constants.ts      Vorschlagsbereiche, die fünf Leitfragen, Grenzwerte
+    constants.ts      Vorgabe- und Alt-Bereiche, die fünf Leitfragen, Grenzwerte
     factories.ts      Leere Reflexion, leerer Hieb, leerer Entwurf
-    date.ts           Lokales Datum, deutsche Formate, Wochenschlüssel, Streak
+    date.ts           Lokales Datum, deutsche Formate, Kalenderwoche, Streak
     storage.ts        Einlesen, Migration alter Stände, lokaler Spiegel
     firebase.ts       Zugriff auf Auth und Firestore
     firebase-config.ts Die einzutragenden Projektwerte (nicht geheim)
@@ -116,18 +158,20 @@ src/
     LoginScreen.tsx   Anmeldung mit Google
     SettingsView.tsx  Konto, Abend-Erinnerung, Gerätestatus
     SyncBadge.tsx     Dezenter Hinweis auf Speichern, Offline, Fehler
-    SetupScreen.tsx   Einmalige Einrichtung der fünf Leitziele
+    SetupScreen.tsx   Einmaliger Einstieg: Erklärung, dann die Leitziele
+    KonzeptText.tsx   Worum es geht – im Einstieg und in den Einstellungen
     AppHeader.tsx     Titel, Streak-Anzeige, Navigation, Zahnrad
     ConfirmDialog.tsx Rückfrage vor unwiderruflichen Schritten
     reflect/          Auftakt, Bereichswahl, Durchlauf, Zwischenfrage, Hiebe, Abschluss
     MorgenView.tsx    Tagesliste: Hiebe plus ergänzte To-dos
-    RueckblickView.tsx Auswertungen, Filter, Archiv
+    RueckblickView.tsx Woche, Jahr, Gesamtbild, Filter, Archiv
     EntryCard.tsx     Ein Abend im Archiv, Bereiche einzeln aufklappbar
     ZieleView.tsx     Lebensbereiche und Ziele verwalten
 scripts/
   send-reminders.mjs  Versand der Abend-Erinnerungen (läuft in GitHub Actions)
   schedule.mjs        Wann ist eine Erinnerung fällig – reine Funktionen
   test-schedule.mjs   Prüfung der Zeitzonen- und Terminlogik
+  test-week.mjs       Prüfung der Kalenderwochen- und Serienrechnung
   test-rules.mjs      Prüfung der Sicherheitsregeln gegen den Emulator
   make-icons.mjs      Erzeugt alle Icon-Größen aus assets/icon.svg
 ```
@@ -199,3 +243,47 @@ Zum Prüfen ohne Warten auf den Abend:
 - **Über den echten Weg:** GitHub → Actions → „Abend-Erinnerung“ → „Run
   workflow“ mit Modus `test`. Das geht denselben Weg wie abends um 21:00 Uhr,
   ignoriert aber Uhrzeit und Tagesstand.
+
+### Wenn nichts ankommt
+
+In dieser Reihenfolge – die ersten beiden Punkte erklären die meisten Fälle:
+
+1. **Lief der Job überhaupt?** GitHub → Actions → „Abend-Erinnerung“. Drei
+   Eigenheiten geplanter Workflows sind hier üblich: Sie laufen nur auf dem
+   Standard-Branch; GitHub schaltet sie nach längerer Inaktivität im Repository
+   von selbst ab (die Actions-Seite bietet dann „Enable workflow“ an); und ein
+   `*/15`-Takt wird auf geteilten Runnern zu Stoßzeiten verzögert oder ganz
+   übersprungen. Jeder Lauf schreibt inzwischen eine Zusammenfassung – geprüfte
+   Konten, fällige, zugestellte, entfernte Abos, Fehler mit Statuscode – und
+   schlägt fehl, wenn niemand erreicht wurde. Ein Lauf ohne Konto mit aktiver
+   Erinnerung gilt ebenfalls als Fehler; wer die Erinnerung bewusst abschaltet,
+   sieht den Job also rot.
+2. **Kam der Lauf zu spät?** `NACHLAUF_MINUTEN` in `scripts/schedule.mjs` steht
+   auf 90. Ein Lauf danach stellt nichts mehr zu – in der Zusammenfassung steht
+   das jetzt als „Nachlauf vorbei“.
+3. **Steht die Erinnerung serverseitig auf aktiv?** Einstellungen → „Diagnose“
+   zeigt Berechtigung, Installationszustand, Uhrzeit, Zeitzone, Anzahl der
+   Geräte und den letzten Versandvermerk. In der Firestore-Konsole liegen
+   dieselben Werte unter `users/{uid}.reminder`. Der Versand filtert über
+   `where('reminder.enabled', '==', true)`: Fehlt das Feld oder ist es anders
+   geschrieben, wird das Konto nie gefunden.
+4. **Gibt es ein Gerät im Verteiler?** `users/{uid}/devices` braucht mindestens
+   ein Dokument mit `endpoint` und beiden Schlüsseln; die Diagnose zeigt die
+   Anzahl. Auf dem iPhone entsteht es nur, wenn die App über „Zum
+   Home-Bildschirm“ installiert ist **und** die Berechtigung aus dieser
+   installierten App heraus erteilt wurde. Apple entwertet Abos außerdem still,
+   wenn eine App lange nicht geöffnet wurde – dann hilft nur, die Erinnerung
+   einmal aus- und wieder einzuschalten.
+5. **Stimmt die Zeitzone?** Weicht die Zeitzone des Geräts von der gespeicherten
+   ab, weist die Diagnose darauf hin und bietet an, sie zu übernehmen. Das ist
+   der häufigste Grund für eine Erinnerung zur falschen Stunde.
+6. **Passen die VAPID-Schlüssel zusammen?** Der öffentliche Schlüssel in
+   `src/lib/firebase-config.ts` und das Paar in den GitHub-Secrets müssen aus
+   demselben Satz stammen. Sonst lehnt der Push-Dienst mit 403 ab; der
+   Statuscode steht in der Zusammenfassung des Laufs, mit ausdrücklichem
+   Hinweis auf das Schlüsselpaar.
+
+`reminder.lastSentLocalDate` gehört dem Versand-Job. Der Client liest das Feld
+(für die Diagnose), schreibt es aber nie – täte er es, überschriebe schon ein
+Tastendruck im Entwurf den Vermerk des Jobs mit einem älteren Stand, und die
+Erinnerung ginge doppelt raus oder bliebe ganz aus.

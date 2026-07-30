@@ -35,7 +35,8 @@ export interface Store {
   setAreaGoal: (areaId: string, goal: string) => void
   /** Löscht den Bereich – oder archiviert ihn, solange Einträge auf ihn zeigen. */
   removeArea: (areaId: string) => void
-  finishSetup: (goals: Record<string, string>) => void
+  /** Schließt die Einrichtung ab; nicht behaltene Vorschläge fallen dabei weg. */
+  finishSetup: (goals: Record<string, string>, keptAreaIds: string[]) => void
   /** Reflexion */
   beginDraft: (date: string) => void
   updateDraft: (mutate: (draft: Draft) => void) => void
@@ -49,6 +50,8 @@ export interface Store {
   updateHieb: (date: string, hiebId: string, patch: Partial<Hieb>) => void
   toggleHieb: (date: string, hiebId: string) => void
   removeHieb: (date: string, hiebId: string) => void
+  /** Rückblick */
+  setWeeklyHighlight: (weekKey: string, text: string) => void
   /** Einstellungen */
   setReminder: (patch: Partial<Reminder>) => void
 }
@@ -215,11 +218,15 @@ export function useStore(user: User): Store {
     })
   }, [])
 
-  const finishSetup = useCallback((goals: Record<string, string>) => {
+  const finishSetup = useCallback((goals: Record<string, string>, keptAreaIds: string[]) => {
     setData((s) => ({
       ...s,
       setupDone: true,
-      areas: s.areas.map((a) => ({ ...a, goal: goals[a.id] ?? a.goal })),
+      // Bei der Einrichtung abgewählte Bereiche werden entfernt, nicht archiviert:
+      // Es gibt noch keinen Eintrag, der auf sie zeigen könnte.
+      areas: s.areas
+        .filter((a) => keptAreaIds.includes(a.id))
+        .map((a) => ({ ...a, goal: goals[a.id] ?? a.goal })),
     }))
   }, [])
 
@@ -324,6 +331,17 @@ export function useStore(user: User): Store {
     [patchEntry],
   )
 
+  const setWeeklyHighlight = useCallback((weekKey: string, text: string) => {
+    setData((s) => {
+      const weeklyHighlights = { ...s.weeklyHighlights }
+      // Ein geleerter Satz verschwindet, statt als leerer Schlüssel liegen zu
+      // bleiben – sonst wüchse die Sammlung mit jeder angetippten Woche.
+      if (text.trim()) weeklyHighlights[weekKey] = text
+      else delete weeklyHighlights[weekKey]
+      return { ...s, weeklyHighlights }
+    })
+  }, [])
+
   const setReminder = useCallback((patch: Partial<Reminder>) => {
     setData((s) => ({ ...s, reminder: { ...s.reminder, ...patch } }))
   }, [])
@@ -357,6 +375,7 @@ export function useStore(user: User): Store {
     updateHieb,
     toggleHieb,
     removeHieb,
+    setWeeklyHighlight,
     setReminder,
   }
 }

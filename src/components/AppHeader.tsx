@@ -1,11 +1,17 @@
 import { SyncBadge } from './SyncBadge'
 import type { SyncStatus, View } from '../lib/types'
 
-const NAV: ReadonlyArray<readonly [View, string]> = [
-  ['reflect', 'Reflexion'],
-  ['morgen', 'Morgen-Blick'],
-  ['rueck', 'Rückblick'],
-  ['ziele', 'Ziele'],
+/**
+ * Zweite Beschriftung je Punkt: Auf 320 px reicht die Breite für
+ * „Morgen-Blick“ auch bei kleinster sinnvoller Schrift nicht. Kürzen ist
+ * besser als umbrechen; welche der beiden sichtbar ist, entscheidet
+ * `styles.css` per Media Query.
+ */
+const NAV: ReadonlyArray<readonly [View, string, string]> = [
+  ['reflect', 'Reflexion', 'Reflexion'],
+  ['morgen', 'Morgen-Blick', 'Morgen'],
+  ['rueck', 'Rückblick', 'Rückblick'],
+  ['ziele', 'Ziele', 'Ziele'],
 ]
 
 interface Props {
@@ -63,7 +69,7 @@ export function AppHeader({ view, streak, status, onNavigate }: Props) {
       </div>
 
       <nav className="nav">
-        {NAV.map(([key, label]) => (
+        {NAV.map(([key, label, short]) => (
           <button
             type="button"
             key={key}
@@ -71,7 +77,8 @@ export function AppHeader({ view, streak, status, onNavigate }: Props) {
             aria-current={key === view ? 'page' : undefined}
             onClick={() => onNavigate(key)}
           >
-            {label}
+            <span className="nav__label">{label}</span>
+            <span className="nav__label nav__label--short">{short}</span>
           </button>
         ))}
       </nav>

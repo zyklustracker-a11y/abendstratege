@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "icons": "node scripts/make-icons.mjs",
-    "test": "node scripts/test-schedule.mjs && npm run test:rules",
+    "test": "node scripts/test-schedule.mjs && node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/test-week.mjs && npm run test:rules",
     "test:rules": "firebase emulators:exec --only firestore --project abendstratege-rules-test \"node scripts/test-rules.mjs\""
   },
   "dependencies": {

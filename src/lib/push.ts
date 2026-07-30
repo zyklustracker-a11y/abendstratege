@@ -1,7 +1,7 @@
 import { NOTIFICATION_BODY, NOTIFICATION_TITLE } from './constants'
 import { vapidPublicKey, pushConfigured } from './firebase-config'
 import { deviceLabel, pushBlocker } from './platform'
-import { removeDevice, saveDevice } from './remote'
+import { countDevices, removeDevice, saveDevice } from './remote'
 import type { PushDevice } from './types'
 
 const SW_URL = `${import.meta.env.BASE_URL}sw.js`
@@ -135,6 +135,14 @@ export async function syncPushDevice(uid: string): Promise<void> {
   } catch {
     // Kein Grund, den Start zu stören – der Nutzer sieht den Status in den Einstellungen.
   }
+}
+
+/**
+ * Wie viele Geräte im Verteiler dieses Kontos liegen. Für die Diagnose in den
+ * Einstellungen; der Weg über diese Datei hält die Ansicht von Firestore fern.
+ */
+export async function countPushDevices(uid: string): Promise<number> {
+  return countDevices(uid)
 }
 
 /** Nimmt dieses Gerät aus dem Verteiler; andere Geräte bleiben unberührt. */

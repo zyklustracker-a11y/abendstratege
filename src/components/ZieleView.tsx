@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { GOAL_PLACEHOLDERS, GOAL_PLACEHOLDER_FALLBACK } from '../lib/constants'
 import { activeAreas } from '../lib/selectors'
 import type { Area } from '../lib/types'
@@ -7,7 +8,8 @@ interface Props {
   areas: Area[]
   onRename: (areaId: string, name: string) => void
   onGoal: (areaId: string, goal: string) => void
-  onAdd: () => void
+  /** Legt einen Bereich an und gibt dessen id zurück, damit er den Fokus bekommt. */
+  onAdd: () => string
   onRemove: (areaId: string) => void
   onConfirm: (request: ConfirmRequest) => void
 }
@@ -15,6 +17,17 @@ interface Props {
 /** Lebensbereiche und ihre Leitziele – eine Liste, weil beides zusammengehört. */
 export function ZieleView({ areas, onRename, onGoal, onAdd, onRemove, onConfirm }: Props) {
   const visible = activeAreas(areas)
+
+  // Ein neu angelegter Bereich ist namenlos und steht am Ende der Liste; ohne
+  // Fokus bliebe unklar, wo weitergeschrieben wird – gerade auf dem Handy, wo
+  // er unter dem Knopf aus dem Bild rutscht.
+  const [focusId, setFocusId] = useState<string | null>(null)
+  const names = useRef(new Map<string, HTMLInputElement>())
+  useEffect(() => {
+    if (!focusId) return
+    names.current.get(focusId)?.focus()
+    setFocusId(null)
+  }, [focusId])
 
   return (
     <div className="fade-in">
@@ -31,6 +44,10 @@ export function ZieleView({ areas, onRename, onGoal, onAdd, onRemove, onConfirm 
               <input
                 type="text"
                 className="area-field__name"
+                ref={(el) => {
+                  if (el) names.current.set(area.id, el)
+                  else names.current.delete(area.id)
+                }}
                 value={area.name}
                 placeholder="Name des Lebensbereichs"
                 aria-label="Name des Lebensbereichs"
@@ -74,7 +91,11 @@ export function ZieleView({ areas, onRename, onGoal, onAdd, onRemove, onConfirm 
         </div>
       )}
 
-      <button type="button" className="btn-text btn-text--add" onClick={onAdd}>
+      <button
+        type="button"
+        className="btn-text btn-text--add"
+        onClick={() => setFocusId(onAdd())}
+      >
         + Lebensbereich hinzufügen
       </button>
     </div>

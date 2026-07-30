@@ -36,6 +36,21 @@ function clean<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
+/**
+ * Die Erinnerung, wie der Client sie schreiben darf – ohne `lastSentLocalDate`.
+ * Dieses Feld führt allein der Versand-Job (scripts/send-reminders.mjs).
+ *
+ * Schrieb der Client es mit, genügte ein Tastendruck im Entwurf nach 21:00 Uhr,
+ * um den Vermerk des Jobs durch den Stand vom Laden der Seite zu ersetzen: Der
+ * nächste Lauf hielt die Erinnerung dann für noch offen und schickte sie ein
+ * zweites Mal. Umgekehrt unterdrückte ein veralteter Wert im Client sie ganz.
+ * Da `setDoc` mit `merge: true` auch verschachtelte Felder zusammenführt, bleibt
+ * der serverseitige Wert unangetastet, wenn er hier fehlt.
+ */
+function reminderPayload(reminder: Reminder) {
+  return { enabled: reminder.enabled, time: reminder.time, timeZone: reminder.timeZone }
+}
+
 function rootPayload(state: PersistedState) {
   return clean({
     version: CURRENT_VERSION,
@@ -43,7 +58,8 @@ function rootPayload(state: PersistedState) {
     setupDone: state.setupDone,
     legacyFormula: state.legacyFormula,
     draft: state.draft,
-    reminder: state.reminder,
+    weeklyHighlights: state.weeklyHighlights,
+    reminder: reminderPayload(state.reminder),
   })
 }
 
@@ -129,7 +145,7 @@ export async function persistRemote(
 }
 
 export async function saveReminder(uid: string, reminder: Reminder): Promise<void> {
-  await setDoc(userDoc(uid), { reminder: clean(reminder) }, { merge: true })
+  await setDoc(userDoc(uid), { reminder: clean(reminderPayload(reminder)) }, { merge: true })
 }
 
 export async function saveDevice(uid: string, device: PushDevice): Promise<void> {
