@@ -13,7 +13,7 @@
 
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
     <!-- Homescreen-Verhalten auf dem iPhone: eigene App-Leiste, dunkle Statuszeile -->
@@ -22,14 +22,262 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Abendstratege" />
 
+    <!--
+      Startbilder fürs iPhone: Ohne sie zeigt eine zum Home-Bildschirm gelegte
+      App beim Start eine leere Fläche, bis das Dokument steht. Apple verlangt
+      ein Bild je Gerätegröße, punktgenau – erzeugt von scripts/make-icons.mjs,
+      im selben Aufbau wie der Ladebildschirm unten.
+    -->
+    <link rel="apple-touch-startup-image" href="/start/start-375x667@2x.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/start/start-414x736@3x.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/start/start-375x812@3x.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/start/start-414x896@2x.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/start/start-414x896@3x.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/start/start-360x780@3x.png" media="(device-width: 360px) and (device-height: 780px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/start/start-390x844@3x.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/start/start-428x926@3x.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/start/start-393x852@3x.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/start/start-430x932@3x.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/start/start-402x874@3x.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/start/start-440x956@3x.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+
+    <!--
+      Ladebildschirm – bewusst hier und nicht in styles.css: Er muss beim ersten
+      Paint stehen, also bevor das Bundle und die Stylesheets da sind. Aus dem
+      gleichen Grund stehen hier rohe Farbwerte statt der Design-Tokens; sie sind
+      Kopien von --bg, --gold und der Messing-Verlauf aus assets/icon.svg.
+    -->
+    <style>
+      html,
+      body {
+        background: #0b0f16;
+      }
+      /* Solange der Ladebildschirm steht, soll nichts dahinter wegscrollen. */
+      html.laedt,
+      html.laedt body {
+        overflow: hidden;
+      }
+
+      .splash {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 38px;
+        /* Derselbe Verlauf wie der Grund des App-Icons – das Zeichen sitzt darin
+           wie auf dem Homescreen, nur ohne seine Platte. */
+        background: radial-gradient(120% 90% at 50% 18%, #151d29 0%, #0e131c 62%, #0b0f16 100%);
+        box-sizing: border-box;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+          env(safe-area-inset-left);
+        opacity: 1;
+        transition: opacity 500ms ease;
+      }
+      .splash--weg {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .splash__logo {
+        width: clamp(96px, 30vw, 128px);
+        height: auto;
+        display: block;
+      }
+      .splash__track {
+        width: min(220px, 56vw);
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(201, 163, 95, 0.16);
+        overflow: hidden;
+      }
+      .splash__fill {
+        width: 0%;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #9d7735 0%, #c9a35f 45%, #e8d0a0 100%);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .splash {
+          transition-duration: 0.001ms;
+        }
+      }
+    </style>
   </head>
   <body>
+    <!--
+      Das Monogramm aus assets/icon.svg, ohne den Grund des Icons – es steht
+      direkt im Verlauf des Bildschirms. Inline, damit es keinen eigenen Abruf
+      braucht und mit dem ersten Frame da ist. Ändert sich das Icon, gehört
+      diese Kopie mitgezogen (siehe scripts/make-icons.mjs).
+    -->
+    <div id="splash" class="splash" role="status" aria-label="Der Abendstratege wird geladen">
+      <svg
+        class="splash__logo"
+        viewBox="0 0 512 512"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <defs>
+          <linearGradient id="splashMessing" x1="18%" y1="6%" x2="82%" y2="96%">
+            <stop offset="0%" stop-color="#e8d0a0" />
+            <stop offset="38%" stop-color="#c9a35f" />
+            <stop offset="100%" stop-color="#9d7735" />
+          </linearGradient>
+        </defs>
+        <g fill="url(#splashMessing)">
+          <path d="M242 92 H272 L160 404 H118 Z" />
+          <path d="M242 92 H272 L394 404 H336 Z" />
+          <rect x="132" y="296" width="242" height="21" />
+          <rect x="96" y="392" width="86" height="12" />
+          <rect x="316" y="392" width="98" height="12" />
+        </g>
+      </svg>
+      <div class="splash__track" aria-hidden="true">
+        <div class="splash__fill" id="splash-fill"></div>
+      </div>
+    </div>
+    <noscript>
+      <style>
+        .splash {
+          display: none;
+        }
+      </style>
+    </noscript>
+
+    <script>
+      /*
+       * Der Ladebildschirm läuft außerhalb von React: Er steht schon, bevor das
+       * Bundle geladen ist, und wird von der App über window.__abendstrategeSplash
+       * gefüttert (siehe src/lib/splash.ts).
+       *
+       * Der Balken kennt zwei Quellen: die echten Meldungen der App und ein
+       * langsames Kriechen, damit er auch dann sichtbar vorankommt, wenn gerade
+       * nichts zu melden ist. Er läuft immer vorwärts – das Ziel wird nur nach
+       * oben gesetzt, der angezeigte Wert folgt ihm gedämpft nach.
+       */
+      ;(function () {
+        var MINDESTDAUER = 2500
+        var AUSBLENDEN = 500
+        var ABSCHLUSS = 320
+        // Notbremse: Kein Fehler in der App darf den Bildschirm dauerhaft stehen lassen.
+        var NOTBREMSE = 12000
+
+        var splash = document.getElementById('splash')
+        var fill = document.getElementById('splash-fill')
+        if (!splash || !fill) return
+
+        var wurzel = document.documentElement
+        wurzel.classList.add('laedt')
+
+        // Zeitkonstante des Kriechens: Nach rund 2,5 Sekunden steht der Balken
+        // dadurch bei etwa 88 %, unabhängig von der Bildrate des Geräts.
+        var KRIECHEN = 1030
+
+        var start = Date.now()
+        var letzterFrame = start
+        var wert = 0
+        var ziel = 6
+        var appBereit = false
+        var schriftenDa = false
+        var abschlussStart = 0
+        var abschlussVon = 0
+        var beendet = false
+
+        function melde(prozent) {
+          var zahl = Number(prozent)
+          if (!isFinite(zahl)) return
+          if (zahl > 96) zahl = 96
+          if (zahl > ziel) ziel = zahl
+        }
+
+        function schriftenFertig() {
+          schriftenDa = true
+          melde(70)
+        }
+
+        // Die Schriften kommen von außen; ohne sie spränge die Typografie nach
+        // dem Ausblenden von der Ersatzschrift auf die richtige um. Beide
+        // Familien werden ausdrücklich angefordert, nicht nur `ready` abgewartet.
+        if (document.fonts && document.fonts.ready) {
+          var warten = [document.fonts.ready]
+          if (document.fonts.load) {
+            warten.push(document.fonts.load('500 16px "Instrument Sans"'))
+            warten.push(document.fonts.load('500 32px "Cormorant Garamond"'))
+          }
+          Promise.all(warten).then(schriftenFertig, schriftenFertig)
+          // Ein lahmer Schriftserver darf den Start nicht aufhalten.
+          window.setTimeout(schriftenFertig, 4000)
+        } else {
+          schriftenFertig()
+        }
+
+        function verschwinden() {
+          if (beendet) return
+          beendet = true
+          splash.classList.add('splash--weg')
+          window.setTimeout(function () {
+            wurzel.classList.remove('laedt')
+            if (splash.parentNode) splash.parentNode.removeChild(splash)
+          }, AUSBLENDEN)
+        }
+
+        function schleife() {
+          var nun = Date.now()
+          var alter = nun - start
+          var abgelaufen = alter >= NOTBREMSE
+
+          /*
+           * Kriechen: Das Ziel wandert von selbst weiter auf 96 % zu, immer vom
+           * aktuellen Stand aus. Absolut gerechnet stünde der Balken still,
+           * sobald eine Meldung der App die Kurve überholt hat – so bleibt er
+           * in Bewegung, wird dabei aber ruhiger, je weiter er kommt.
+           */
+          ziel += (96 - ziel) * (1 - Math.exp(-(nun - letzterFrame) / KRIECHEN))
+          letzterFrame = nun
+
+          var fertig = (appBereit && schriftenDa && alter >= MINDESTDAUER) || abgelaufen
+          if (fertig && !abschlussStart) {
+            abschlussStart = Date.now()
+            abschlussVon = wert
+          }
+
+          if (abschlussStart) {
+            var anteil = Math.min(1, (Date.now() - abschlussStart) / ABSCHLUSS)
+            wert = abschlussVon + (100 - abschlussVon) * anteil
+            fill.style.width = wert.toFixed(2) + '%'
+            if (anteil >= 1) {
+              verschwinden()
+              return
+            }
+          } else {
+            wert += (ziel - wert) * 0.08
+            fill.style.width = wert.toFixed(2) + '%'
+          }
+
+          window.requestAnimationFrame(schleife)
+        }
+
+        window.__abendstrategeSplash = {
+          fortschritt: melde,
+          bereit: function () {
+            appBereit = true
+          },
+        }
+
+        window.requestAnimationFrame(schleife)
+      })()
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
