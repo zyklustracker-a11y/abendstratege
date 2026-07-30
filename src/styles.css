@@ -438,6 +438,50 @@ textarea {
   border-bottom-color: var(--gold);
   color: var(--ink);
 }
+.nav__label--short {
+  display: none;
+}
+
+/*
+ * Auf dem Handy brach die Zeile um und „Ziele“ rutschte allein in die zweite
+ * Reihe. Die vier Punkte teilen sich stattdessen die Breite gleichmäßig, kleiner
+ * gesetzt. `min-height` hält die Trefferfläche komfortabel, obwohl die Schrift
+ * schrumpft; das negative `margin-bottom` der Grundregel lässt die goldene
+ * Unterstreichung weiterhin auf der Trennlinie liegen.
+ */
+@media (max-width: 480px) {
+  .nav {
+    flex-wrap: nowrap;
+    gap: 0;
+  }
+  .nav__item {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 12px;
+    letter-spacing: 0.01em;
+    padding: 10px 3px;
+  }
+}
+
+/*
+ * Unter 400 px reicht der Platz auch klein gesetzt nicht für „Morgen-Blick“.
+ * Sichtbar ist immer genau eine der beiden Beschriftungen – `display: none`
+ * nimmt die andere auch aus dem Barrierefreiheits-Baum, sie wird also nicht
+ * zusätzlich vorgelesen.
+ */
+@media (max-width: 400px) {
+  .nav__label {
+    display: none;
+  }
+  .nav__label--short {
+    display: inline;
+  }
+}
 
 .view-title {
   font-family: var(--serif);
