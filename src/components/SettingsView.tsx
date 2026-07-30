@@ -19,6 +19,7 @@ import {
 import { deviceTimeZone } from '../lib/storage'
 import type { Reminder } from '../lib/types'
 import type { ConfirmRequest } from './ConfirmDialog'
+import { KonzeptText } from './KonzeptText'
 
 interface Props {
   user: User
@@ -277,8 +278,8 @@ export function SettingsView({ user, reminder, onReminder, onConfirm }: Props) {
         {/* Zugeklappt, weil es im Alltag niemanden interessiert: Es sind die Werte,
             die man sonst in der Firebase-Konsole zusammensuchen müsste, wenn eine
             Erinnerung ausbleibt. Ein Statusfenster, kein Alarm. */}
-        <details className="diagnose" onToggle={(e) => openDiagnose(e.currentTarget.open)}>
-          <summary className="diagnose__summary">Diagnose</summary>
+        <details className="fold" onToggle={(e) => openDiagnose(e.currentTarget.open)}>
+          <summary className="fold__summary">Diagnose</summary>
           <dl className="diagnose__rows">
             <div className="diagnose__row">
               <dt className="diagnose__key">Berechtigung</dt>
@@ -323,6 +324,18 @@ export function SettingsView({ user, reminder, onReminder, onConfirm }: Props) {
               </dd>
             </div>
           </dl>
+        </details>
+      </section>
+
+      <section className="settings__section">
+        <h3 className="settings__heading">Der Abendstratege</h3>
+        {/* Derselbe Text wie beim ersten Start – dort liest ihn niemand zweimal,
+            und später fehlt sonst jede Stelle, an der der Ansatz noch einmal steht. */}
+        <details className="fold fold--flush">
+          <summary className="fold__summary">Was ist der Abendstratege?</summary>
+          <div className="settings__konzept">
+            <KonzeptText />
+          </div>
         </details>
       </section>
     </div>

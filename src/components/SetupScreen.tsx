@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { GOAL_PLACEHOLDERS, GOAL_PLACEHOLDER_FALLBACK } from '../lib/constants'
 import type { Area } from '../lib/types'
+import { KonzeptText } from './KonzeptText'
 
 interface Props {
   areas: Area[]
@@ -31,8 +32,15 @@ function word(n: number): string {
   return WORDS[n] ?? String(n)
 }
 
-/** Einmaliger erster Start: je ein Leitziel für die vorgeschlagenen Bereiche. */
+/**
+ * Einmaliger erster Start, in zwei Schritten: erst worum es geht, dann die
+ * Leitziele. Wer den Abendstrategen nicht kennt, wüsste sonst nicht, worauf er
+ * sich einlässt – und warum ausgerechnet Ziele der erste Schritt sind. Der
+ * Schritt ist bewusst nur lokaler Zustand: Er überlebt kein Neuladen, und das
+ * ist richtig so, weil dabei ohnehin nichts verloren geht.
+ */
 export function SetupScreen({ areas, onFinish }: Props) {
+  const [step, setStep] = useState<1 | 2>(1)
   const [goals, setGoals] = useState<Record<string, string>>(() =>
     Object.fromEntries(areas.map((a) => [a.id, a.goal])),
   )
@@ -44,9 +52,30 @@ export function SetupScreen({ areas, onFinish }: Props) {
   const missing = visible.filter((a) => !(goals[a.id] ?? '').trim()).length
   const ready = visible.length > 0 && missing === 0
 
+  if (step === 1) {
+    return (
+      <div className="setup fade-in--slow">
+        <div className="setup__eyebrow">Der Abendstratege</div>
+        <div className="eyebrow eyebrow--muted setup__step">Schritt 1 von 2</div>
+        <h1 className="setup__title">Worum es hier geht.</h1>
+
+        <KonzeptText />
+
+        <button
+          type="button"
+          className="btn-primary setup__submit"
+          onClick={() => setStep(2)}
+        >
+          Verstanden – los geht’s
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <div className="setup fade-in--slow">
+    <div className="setup fade-in">
       <div className="setup__eyebrow">Der Abendstratege</div>
+      <div className="eyebrow eyebrow--muted setup__step">Schritt 2 von 2</div>
       <h1 className="setup__title">
         Bevor du beginnst:
         <br />
@@ -56,8 +85,9 @@ export function SetupScreen({ areas, onFinish }: Props) {
         {visible.length === 1
           ? 'Definiere ein übergeordnetes Ziel für diesen Lebensbereich. Es ist das Fundament dieser App – jeder Erfolg wird später an ihm gemessen.'
           : `Definiere je ein übergeordnetes Ziel in diesen ${word(visible.length)} Lebensbereichen. Sie sind das Fundament dieser App – jeder Erfolg wird später an ihnen gemessen.`}{' '}
-        Bereiche und Ziele kannst du später jederzeit ändern, ergänzen oder entfernen. Was du nicht
-        brauchst, nimm gleich heraus.
+        Jeder Erfolg, den du abends festhältst, wird an genau diesen Zielen gemessen – deshalb
+        beginnt hier alles. Bereiche und Ziele kannst du später jederzeit ändern, ergänzen oder
+        entfernen. Was du nicht brauchst, nimm gleich heraus.
       </p>
 
       <div className="fields fields--setup">
@@ -106,6 +136,12 @@ export function SetupScreen({ areas, onFinish }: Props) {
             ? 'Noch ein Ziel fehlt.'
             : `Noch ${word(missing)} Ziele fehlen.`}
       </p>
+
+      <div className="setup__back">
+        <button type="button" className="btn-text" onClick={() => setStep(1)}>
+          Zurück zur Erklärung
+        </button>
+      </div>
     </div>
   )
 }
