@@ -13,6 +13,7 @@ import { useAuth } from './lib/auth'
 import { iso, weekKeyOf } from './lib/date'
 import { firebaseConfigured } from './lib/firebase-config'
 import { registerServiceWorker, syncPushDevice } from './lib/push'
+import { splashFertig, splashFortschritt } from './lib/splash'
 import { useStore } from './lib/store'
 import type { Filter, Period, Stage, View } from './lib/types'
 
@@ -29,6 +30,21 @@ export default function App() {
   useEffect(() => {
     void registerServiceWorker()
   }, [])
+
+  /**
+   * Der Ladebildschirm verschwindet erst, wenn wirklich etwas Fertiges
+   * dahintersteht. Ohne Konto ist das der Anmeldebildschirm, mit Konto der
+   * geladene Stand (siehe SignedInApp).
+   */
+  useEffect(() => {
+    if (!firebaseConfigured) {
+      splashFertig()
+      return
+    }
+    if (pending) return
+    splashFortschritt(80)
+    if (!user) splashFertig()
+  }, [pending, user])
 
   if (!firebaseConfigured) {
     return (
@@ -101,6 +117,12 @@ function SignedInApp({ user }: { user: User }) {
   useEffect(() => {
     if (store.ready && data.reminder.enabled) void syncPushDevice(user.uid)
   }, [store.ready, data.reminder.enabled, user.uid])
+
+  // 'fehler' ohne geladenen Stand ist ebenfalls ein fertiger Bildschirm – sonst
+  // bliebe der Ladebildschirm ohne Verbindung endlos stehen.
+  useEffect(() => {
+    if (store.ready || store.status === 'fehler') splashFertig()
+  }, [store.ready, store.status])
 
   if (!store.ready) {
     return (

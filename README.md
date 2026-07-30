@@ -72,6 +72,32 @@ funktioniert die Google-Weiterleitung auf dem iPhone im Homescreen-Modus nicht
 zuverlässig. Außerdem liegt die App unter der Wurzel, sodass der Service Worker
 ohne Pfadkorrekturen für die ganze Anwendung zuständig ist.
 
+## Ladebildschirm
+
+Beim Start steht zuerst ein eigener Bildschirm: das Monogramm der App, darunter
+ein schmaler Fortschrittsbalken. Er liegt samt Stilen und Ablauflogik direkt in
+`index.html` – nur so steht er beim allerersten Paint, bevor Bundle und
+`styles.css` geladen sind. Das Monogramm ist dort inline eingebettet und braucht
+keinen eigenen Abruf.
+
+Er verschwindet erst, wenn die App wirklich fertig ist: Bundle geladen, beide
+Schriften da, Anmeldung geklärt und – bei angemeldetem Konto – der Stand aus
+Firestore gelesen. Dazu kommt eine Mindestdauer von 2,5 Sekunden, damit nichts
+ruckartig umspringt, und ein Ausblenden über eine halbe Sekunde. Der Balken läuft
+immer vorwärts und immer bis 100 %: Meldungen der App schieben ihn weiter, in
+den Pausen kriecht er von selbst. Bleibt eine Meldung aus, greift nach zwölf
+Sekunden eine Notbremse – ein Fehler in der App darf den Bildschirm nie
+dauerhaft stehen lassen.
+
+Die App meldet sich über `src/lib/splash.ts`; wer einen neuen Startpfad einführt,
+ruft dort `splashFertig()` auf, sonst hängt der Bildschirm bis zur Notbremse.
+
+Fürs iPhone liegen zusätzlich Startbilder in `public/start/`. Ohne sie zeigt eine
+zum Home-Bildschirm gelegte App beim Start eine leere Fläche, bis das Dokument
+steht. Sie bilden denselben Aufbau ab wie der Ladebildschirm – gleicher Verlauf,
+gleiche Stelle, Balken noch leer – und werden von `npm run icons` miterzeugt,
+das die passenden `<link>`-Zeilen für den `<head>` ausgibt.
+
 ## Der erste Start
 
 Zwei Schritte, bevor es losgeht:
@@ -131,9 +157,10 @@ Vorjahres zählen. Die Wochenhighlights liegen unter ihrem Schlüssel
 ## Aufbau
 
 ```
-index.html            Einstiegspunkt, Schriften, Icons, iOS-Meta-Daten
+index.html            Einstiegspunkt, Schriften, Icons, iOS-Meta-Daten, Ladebildschirm
 assets/icon.svg       Quelle aller Icons – Messing-Monogramm auf dunklem Grund
 public/               Icons, Manifest, Service Worker (unverändert ausgeliefert)
+  start/              Startbilder fürs iPhone, je Gerätegröße eines
   sw.js               Push-Empfang, Klickverhalten, schlichter Offline-Fallback
 firestore.rules       Sicherheitsregeln: jedes Konto sieht nur seinen Zweig
 firebase.json         Hosting-Konfiguration samt Cache-Regeln
@@ -152,6 +179,7 @@ src/
     remote.ts         Lesen und Schreiben in Firestore, Abgleich der Änderungen
     push.ts           Berechtigung, Push-Abo, Geräteverwaltung
     platform.ts       Was Benachrichtigungen auf diesem Gerät im Weg steht
+    splash.ts         Meldungen an den Ladebildschirm in index.html
     store.ts          Zustand und alle schreibenden Aktionen (`useStore`)
     selectors.ts      Ableitungen: Sortierung, Statistiken, Bereichsnamen
   components/
@@ -173,7 +201,7 @@ scripts/
   test-schedule.mjs   Prüfung der Zeitzonen- und Terminlogik
   test-week.mjs       Prüfung der Kalenderwochen- und Serienrechnung
   test-rules.mjs      Prüfung der Sicherheitsregeln gegen den Emulator
-  make-icons.mjs      Erzeugt alle Icon-Größen aus assets/icon.svg
+  make-icons.mjs      Erzeugt Icons und iOS-Startbilder aus assets/icon.svg
 ```
 
 ## Daten

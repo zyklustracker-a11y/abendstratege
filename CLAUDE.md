@@ -71,6 +71,7 @@ src/lib/date.ts          Lokale Datumslogik, deutsche Formate, Streak
 src/lib/constants.ts     Texte und Grenzwerte, die an mehreren Stellen gebraucht werden
 src/components/          Ansichten; reflect/ enthält die Stufen des Abendablaufs
 src/styles.css           Design-Tokens und sämtliche Styles
+index.html               Kopfdaten und der Ladebildschirm (eigene Regeln, siehe unten)
 public/sw.js             Service Worker, wird unverändert ausgeliefert (kein Build-Schritt)
 scripts/                 Node-Skripte für GitHub Actions (eigene package.json)
 ```
@@ -142,7 +143,8 @@ und ergänzt bei Bedarf `scripts/test-rules.mjs`.
 ## Styles
 
 - Alle Styles zentral in `src/styles.css`. **Keine Inline-Styles**, außer für
-  einen berechneten Einzelwert (wie die Balkenbreite in der Statistik). Keine
+  einen berechneten Einzelwert (wie die Balkenbreite in der Statistik).
+  Einzige Ausnahme ist der Ladebildschirm in `index.html` — siehe unten. Keine
   CSS-Module, kein Tailwind, keine styled-components.
 - Farben, Schriften und Abstände über die Design-Tokens in `:root`
   (`--gold`, `--ink`, `--muted`, `--panel`, `--line`, `--serif`, `--sans` …).
@@ -164,6 +166,26 @@ Fokusringe, `aria-label` an Icon-Schaltflächen, `aria-current` an der
 Navigation, `aria-pressed` an Filtern, `role="status"` bzw. `role="alert"` an
 eingeblendeten Hinweisen, jedes Eingabefeld beschriftet. Neue interaktive
 Elemente sind Buttons mit `type="button"`, keine klickbaren `div`s.
+
+## Der Ladebildschirm — die eine Ausnahme
+
+Stile und Ablauf des Ladebildschirms stehen in `index.html`, nicht in
+`styles.css`, und arbeiten mit rohen Farbwerten statt mit den Design-Tokens.
+Beides ist unvermeidlich: Er muss beim allerersten Paint stehen, also bevor
+Bundle und Stylesheet geladen sind. **Das ist kein Freibrief** — neue Styles
+gehören weiterhin ausschließlich nach `styles.css`.
+
+Was dabei zusammenhängt:
+
+- Die App meldet ihren Fortschritt über `src/lib/splash.ts`. Wer einen neuen
+  Startpfad einführt (eine weitere Weiche in `App.tsx`), ruft dort
+  `splashFertig()` auf — sonst bleibt der Bildschirm bis zur Notbremse stehen.
+- Der Bildschirm verschwindet erst, wenn App **und** Schriften bereit sind und
+  die Mindestdauer abgelaufen ist. Wer eine weitere Vorbedingung braucht, hängt
+  sie an dieselbe Stelle, statt die Mindestdauer zu verlängern.
+- Das Monogramm liegt dort als Kopie aus `assets/icon.svg`, und die Startbilder
+  in `public/start/` bilden denselben Aufbau ab. Ändert sich das Icon, laufen
+  `npm run icons` und ein Abgleich der Kopie in `index.html` zusammen.
 
 ## Benachrichtigungen — drei Orte, ein Text
 
